@@ -57,6 +57,9 @@ export function nodeCandidates(execPath: string = process.execPath, env: NodeJS.
       return;
     }
     const normalized = path.normalize(candidate);
+    if (isUselessNodePath(normalized)) {
+      return;
+    }
     if (!seen.has(normalized)) {
       seen.add(normalized);
       result.push(normalized);
@@ -84,6 +87,21 @@ export function nodeCandidates(execPath: string = process.execPath, env: NodeJS.
     add('/usr/bin/node');
   }
   return result;
+}
+
+/** 解析 node --version 输出；空输出/异常输出不返回版本（避免被误判成 0.x）。 */
+export function parseNodeVersion(text: string): { version?: string; major?: number } {
+  const match = /v(\d+)\.(\d+)\.(\d+)/.exec(String(text || ''));
+  if (!match) {
+    return {};
+  }
+  const version = 'v' + match[1] + '.' + match[2] + '.' + match[3];
+  return { version, major: Number(match[1]) };
+}
+
+/** Windows 商店别名 / 非真实 node 的路径，跳过。 */
+export function isUselessNodePath(candidate: string): boolean {
+  return /\\WindowsApps\\/i.test(candidate) || /\\Microsoft\\WindowsApps\\/i.test(candidate);
 }
 
 export function resolveNodeExec(execPath: string = process.execPath, env: NodeJS.ProcessEnv = process.env): string | undefined {
@@ -165,30 +183,40 @@ export async function detectNpmRuntime(force = false): Promise<NpmRuntime> {
   if (!force && cachedRuntime && Date.now() - cachedRuntime.at < RUNTIME_TTL_MS) {
     return cachedRuntime.value;
   }
-  const nodeExec = resolveNodeExec();
+  // 逐个候选验证：必须真的能跑出 vX.Y.Z 才算可用（商店别名的 node.exe 会执行失败）。
+  const candidates = nodeCandidates();
+  const failures: string[] = [];
+  let lowVersion: string | undefined;
+  let nodeExec: string | undefined;
+  let nodeVersion: string | undefined;
+  for (const candidate of candidates) {
+    const probe = await runFile(candidate, ['--version'], 8000);
+    const parsed = parseNodeVersion(probe.text);
+    if (!parsed.version) {
+      failures.push(candidate + '（' + (probe.error || '没有输出版本') + '）');
+      continue;
+    }
+    if ((parsed.major ?? 0) < 18) {
+      lowVersion = parsed.version;
+      continue;
+    }
+    nodeExec = candidate;
+    nodeVersion = parsed.version;
+    break;
+  }
   if (!nodeExec) {
-    const value: NpmRuntime = {
-      ok: false,
-      error: '未检测到 Node.js 18+。VS Code 自带的 Electron 不能直接当 Node 用，请安装 Node.js 后重试。',
-    };
-    cachedRuntime = { at: Date.now(), value };
-    return value;
-  }
-  const node = await runFile(nodeExec, ['--version'], 8000);
-  const nodeVersion = node.text.split('\n')[0]?.trim();
-  const nodeMajor = Number(String(nodeVersion || '').replace(/^v/i, '').split('.')[0]);
-  if (Number.isFinite(nodeMajor) && nodeMajor < 18) {
-    const value: NpmRuntime = {
-      ok: false,
-      nodeExec,
-      nodeVersion,
-      error: 'Node.js 版本过低（' + nodeVersion + '），豆包 CLI 需要 18 或以上。',
-    };
-    cachedRuntime = { at: Date.now(), value };
-    return value;
-  }
-  if (node.code !== 0 || !nodeVersion) {
-    const value: NpmRuntime = { ok: false, nodeExec, error: '无法运行 Node.js（' + (node.error || '未知错误') + '）' };
+    const value: NpmRuntime = lowVersion
+      ? {
+          ok: false,
+          nodeVersion: lowVersion,
+          error: 'Node.js 版本过低（' + lowVersion + '），豆包 CLI 需要 18 或以上。',
+        }
+      : {
+          ok: false,
+          error:
+            '无法运行 Node.js（尝试了 ' + candidates.length + ' 个路径' + (failures[0] ? '，例如：' + failures[0] : '') + '）。' +
+            '请安装 Node.js 18+ 后点「重新检测」。',
+        };
     cachedRuntime = { at: Date.now(), value };
     return value;
   }

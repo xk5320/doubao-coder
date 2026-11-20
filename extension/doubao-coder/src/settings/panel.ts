@@ -279,7 +279,8 @@ async function runAction(context: vscode.ExtensionContext, action: string): Prom
         const terminal = vscode.window.createTerminal({ name: '安装豆包 CLI' });
         terminal.show();
         terminal.sendText(CLI_INSTALL_COMMAND, true);
-        post({ type: 'notice', message: '已在终端里执行安装命令，完成后点「重新检测」。' });
+        post({ type: 'notice', message: '已开始安装：安装结束后会自动检测并刷新，无需手动点「重新检测」。' });
+        void watchTerminalInstall(context);
         break;
       }
       case 'openNodeDownload':
@@ -419,6 +420,40 @@ async function runAutoInstall(context: vscode.ExtensionContext): Promise<void> {
   await pushState(context);
   if (info.installed) {
     void vscode.commands.executeCommand('doubao.cliLogin');
+  }
+}
+
+let terminalWatch = false;
+
+/** 终端安装：轮询检测，装好后自动刷新并打开登录。 */
+async function watchTerminalInstall(context: vscode.ExtensionContext): Promise<void> {
+  if (terminalWatch) {
+    return;
+  }
+  terminalWatch = true;
+  try {
+    for (let i = 0; i < 100; i += 1) {
+      await delay(3000);
+      clearCliCache();
+      const info = await detectCli(readConfig().cliPath);
+      if (info.installed) {
+        post({ type: 'installDone', ok: true, version: info.version || '' });
+        post({
+          type: 'notice',
+          message: '检测到豆包 CLI' + (info.version ? '（' + info.version + '）' : '') + '，正在打开登录…',
+        });
+        await pushState(context);
+        void vscode.commands.executeCommand('doubao.cliLogin');
+        return;
+      }
+      if (i > 0 && i % 5 === 0) {
+        post({ type: 'notice', message: '仍在等待 CLI 安装完成…（' + i * 3 + ' 秒）' });
+        await pushState(context);
+      }
+    }
+    post({ type: 'error', message: '等待安装超时：如果终端已装完，请点「重新检测」。' });
+  } finally {
+    terminalWatch = false;
   }
 }
 

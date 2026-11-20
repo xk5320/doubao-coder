@@ -14,6 +14,8 @@ const {
   resolveNodeExec,
   resolveNpmCli,
   runNpmInstall,
+  parseNodeVersion,
+  isUselessNodePath,
 } = require(path.join(__dirname, '..', 'out', 'cli', 'install.js'));
 
 let pass = 0;
@@ -129,7 +131,17 @@ function fakeSpawn(script) {
     check('超时：timedOut=true 且杀进程', result.timedOut === true && killed === true);
   }
 
-  console.log('\n' + pass + ' passed, ' + fail + ' failed');
+  /* ---- Node 版本解析 / 候选过滤 ---- */
+check('Node 版本：正常输出', parseNodeVersion('v20.11.0\n').version === 'v20.11.0' && parseNodeVersion('v20.11.0').major === 20);
+check('Node 版本：空输出不当作 0.x', parseNodeVersion('').version === undefined);
+check('Node 版本：垃圾输出不误判', parseNodeVersion('not a version').version === undefined);
+check('Node 路径：跳过 WindowsApps 别名', isUselessNodePath('C:\\Users\\a\\AppData\\Local\\Microsoft\\WindowsApps\\node.exe') === true);
+check('Node 路径：正常安装目录可用', isUselessNodePath('C:\\Program Files\\nodejs\\node.exe') === false);
+const filtered = nodeCandidates(process.execPath, { PATH: 'C:\\Users\\a\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Program Files\\nodejs' });
+check('Node 候选：过滤 WindowsApps', filtered.every((item) => !/WindowsApps/i.test(item)));
+check('Node 候选：保留正常路径', filtered.some((item) => /Program Files/i.test(item)));
+
+console.log('\n' + pass + ' passed, ' + fail + ' failed');
   if (fail > 0) {
     process.exitCode = 1;
   }
