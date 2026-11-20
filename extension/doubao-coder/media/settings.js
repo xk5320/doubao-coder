@@ -11,12 +11,12 @@
   const MODE_META = {
     cli: {
       title: '豆包 CLI',
-      tag: '推荐',
+      tag: '需订阅',
       desc: '文件读写、终端、技能、子 Agent 都由官方 CLI 执行；扩展只做界面。',
     },
     desktop: {
       title: '豆包桌面版',
-      tag: '免 Key',
+      tag: '推荐 · 免 Key',
       desc: '复用桌面版登录态，通过调试端口驱动窗口；会抢占一次焦点。',
     },
     ark: {
@@ -225,7 +225,7 @@
   function renderModes() {
     const box = section('连接方式', '首次激活会弹一次选择，这里可以随时切换');
     const grid = el('div', 'modes');
-    for (const mode of ['cli', 'desktop', 'ark']) {
+    for (const mode of ['desktop', 'cli', 'ark']) {
       const status = modeStatus(mode);
       const card = el('label', 'mode' + (state.authMode === mode ? ' active' : ''));
       const radio = document.createElement('input');

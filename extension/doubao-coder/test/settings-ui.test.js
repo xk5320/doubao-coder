@@ -96,7 +96,7 @@ check('渲染：显示版本与登录状态', app.textContent.includes('2.37.2')
 check('渲染：通用配置区', app.textContent.includes('通用') && app.textContent.includes('行内补全'));
 
 /* 切换连接方式：radio change */
-const desktopRadio = radios[1];
+const desktopRadio = radios.filter((item) => item.value === 'desktop')[0];
 desktopRadio.checked = true;
 desktopRadio.dispatchEvent({ type: 'change', target: desktopRadio });
 check(

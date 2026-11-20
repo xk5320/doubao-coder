@@ -319,6 +319,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       vscode.window.showInformationMessage('已添加 MCP 模板：' + picked.label + '（重新加载窗口后生效）');
     }),
 
+    vscode.commands.registerCommand('doubao.useDesktopMode', async () => {
+      log('命令：切换到豆包桌面版通道');
+      await vscode.workspace.getConfiguration('doubao').update('authMode', 'desktop', vscode.ConfigurationTarget.Global);
+      vscode.window.showInformationMessage('已切换到豆包桌面版通道；如提示端口未开，执行「豆包: 重连桌面端」。');
+      void vscode.commands.executeCommand('doubao.reconnectDesktop');
+    }),
+
     vscode.commands.registerCommand('doubao.reconnectDesktop', async () => {
       log('命令：重连豆包桌面端');
       await provider.reconnectDesktop();
@@ -879,17 +886,16 @@ async function chooseConnectionMode(context: vscode.ExtensionContext, firstRun: 
 
   const items: ConnectionPick[] = [
     {
-      label: '$(terminal) 豆包 CLI（轻量 · 推荐）',
-      description: cliInfo?.installed ? '已安装 v' + (cliInfo.version ?? '') : '未安装，选择后引导安装',
-      detail:
-        'Agent、文件读写、终端、技能、子 Agent 都由官方 CLI 执行，扩展只做侧边栏界面；需要豆包团队/企业订阅。',
-      mode: 'cli',
+      label: '$(window) 豆包桌面版（推荐 · 免 API Key）',
+      description: desktopOk ? '调试端口已就绪' : '需要安装并以调试端口启动',
+      detail: '复用桌面版登录态，不需要 API Key；扩展自带工具循环（PTC），最稳、反馈最及时。',
+      mode: 'desktop',
     },
     {
-      label: '$(window) 豆包桌面版（免 API Key）',
-      description: desktopOk ? '调试端口已就绪' : '需要安装并以调试端口启动',
-      detail: '复用桌面版登录态，不需要 API Key；通过 CDP 驱动桌面窗口，可能抢占焦点。',
-      mode: 'desktop',
+      label: '$(terminal) 豆包 CLI（可选 · 需订阅）',
+      description: cliInfo?.installed ? '已安装 v' + (cliInfo.version ?? '') : '未安装，选择后引导安装',
+      detail: 'Agent 由官方 CLI 执行；需要豆包团队/企业订阅，未登录时可能长时间没有输出。',
+      mode: 'cli',
     },
     {
       label: '$(key) 火山方舟 API Key',

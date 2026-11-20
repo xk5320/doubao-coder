@@ -289,3 +289,13 @@ webview 不能借消息改写任意 settings.json 键。
 - 本机 CLI 探测：未安装（`{ installed: false, source: "missing" }`），扩展走“引导安装/登录”分支，不阻塞其它连接方式；
 - CLI 相关命令/配置已注册：`doubao.cliLogin / cliCheck / cliInstall / cliOpenTerminal / cliStartService`，
   `doubao.authMode=cli`、`doubao.cli.*` 配置项齐全。
+## 8. 优先级调整（0.55.0）
+
+实测 CLI 通道在未登录/未开通订阅时会出现“长时间无任何反馈”，体验不如桌面端。因此调整优先级：
+
+1. **第一优先：豆包桌面版（免 Key）** —— 复用桌面登录态，扩展自带工具循环（PTC），反馈实时；
+2. **第二优先：扩展自带 Agent 能力（PTC 工具循环）** —— 不依赖 CLI，桌面端/Ark 都能用；
+3. **可选：豆包 CLI** —— 需要团队/企业订阅；仅作为可选通道保留。
+
+对应改动：首次选择与设置中心的连接方式改为「桌面版（推荐）→ CLI（需订阅）→ Ark」，
+新增命令「豆包：切换到豆包桌面版」；CLI 运行超过 60 秒无输出会提示并可直接切换回桌面版。

@@ -210,6 +210,25 @@ function killProcessTree(child: ChildProcess): void {
     const taskkillExe = path.join(systemRoot, 'System32', 'taskkill.exe');
     const taskkillCommand = existsSync(taskkillExe) ? taskkillExe : 'taskkill';
     try {
+      // 兜底：父进程刚被杀时，孙进程可能刚好完成创建而变成孤儿（父 PID 已消失但仍记录在进程表里）。
+      // 用 ParentProcessId 反查并清理，避免高负载下偶发残留。
+      const sweepOrphans = (): void => {
+        const script =
+          'Get-CimInstance Win32_Process | Where-Object { $_.ParentProcessId -eq ' +
+          String(pid) +
+          ' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }';
+        const psExe = path.join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+        try {
+          spawn(existsSync(psExe) ? psExe : 'powershell', ['-NoProfile', '-NonInteractive', '-Command', script], {
+            stdio: 'ignore',
+            windowsHide: true,
+          }).on('error', () => undefined);
+        } catch {
+          /* 清理失败不影响主流程 */
+        }
+      };
+      sweepOrphans();
+      setTimeout(sweepOrphans, 900).unref?.();
       const killer = spawn(taskkillCommand, ['/PID', String(pid), '/T', '/F'], {
         stdio: 'ignore',
         windowsHide: true,

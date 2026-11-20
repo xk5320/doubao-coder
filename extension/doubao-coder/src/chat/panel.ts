@@ -1635,6 +1635,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     this.abortController = controller;
     this.running = true;
     this.postState();
+    let cliWatchdog: NodeJS.Timeout | undefined;
 
     try {
       const info = await detectCli(config.cliPath);
@@ -1662,9 +1663,40 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         }
         lastStatus = line;
         lastStatusAt = Date.now();
+        markOutput();
         this.post({ type: 'generating', text: line });
       };
 
+      // CLI 是外部进程：长时间无输出时必须给用户可见反馈，否则看起来像“没反应”。
+      let sawCliOutput = false;
+      let warnedSilent = false;
+      const cliStartedAt = Date.now();
+      const markOutput = (): void => {
+        sawCliOutput = true;
+      };
+      cliWatchdog = setInterval(() => {
+        if (sawCliOutput || this.disposed) {
+          return;
+        }
+        const seconds = Math.round((Date.now() - cliStartedAt) / 1000);
+        this.post({ type: 'generating', text: '已交给豆包 CLI，等待输出… ' + seconds + 's' });
+        if (seconds >= 60 && !warnedSilent) {
+          warnedSilent = true;
+          void vscode.window
+            .showWarningMessage(
+              '豆包 CLI 一分钟没有任何输出，可能未登录/未开通订阅。可以改用豆包桌面版通道。',
+              '切换到桌面版',
+              '查看 CLI 日志',
+            )
+            .then((picked) => {
+              if (picked === '切换到桌面版') {
+                void vscode.commands.executeCommand('doubao.useDesktopMode');
+              } else if (picked === '查看 CLI 日志') {
+                void vscode.commands.executeCommand('doubao.showLogs');
+              }
+            });
+        }
+      }, 5000);
       const promptFor = (resumeId: string | undefined): string => {
         if (resumeId || this.cliHistory.length === 0) {
           return userContent;
@@ -1739,6 +1771,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       }
 
       const text = result.text;
+      markOutput();
       if (!text) {
         this.post({ type: 'notice', text: '豆包 CLI 没有输出文本（任务可能已完成，可到终端里查看 CLI 日志）。' });
       } else {
@@ -1761,6 +1794,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       this.post({ type: 'error', message: '豆包 CLI 调用失败：' + message });
       this.post({ type: 'assistant_done', aborted: true, at: Date.now() });
     } finally {
+      if (cliWatchdog) {
+        clearInterval(cliWatchdog);
+      }
       this.running = false;
       this.abortController = undefined;
       this.persistTurn();

@@ -122,5 +122,11 @@ check('CLI 引导：对话内安装→登录流程', panel.includes('startCliOnb
 check('CLI 引导：按钮动作分发', panel.includes('handleCliGuideAction') && panel.includes("case 'cliGuideAction'"));
 check('CLI 引导：webview 渲染卡片', fs.readFileSync(path.join(root, 'media', 'chat.js'), 'utf8').includes('renderCliGuide'));
 
+const extSrc = fs.readFileSync(path.join(root, 'src', 'extension.ts'), 'utf8');
+check('优先级：桌面版排在 CLI 前面', extSrc.indexOf('豆包桌面版（推荐') > 0 && extSrc.indexOf('豆包桌面版（推荐') < extSrc.indexOf('豆包 CLI（可选'));
+check('优先级：可一键切回桌面版', extSrc.includes('doubao.useDesktopMode'));
+check('CLI 静默超时提示', panel.includes('sawCliOutput') && panel.includes('一分钟没有任何输出'));
+check('设置中心顺序：桌面版优先', fs.readFileSync(path.join(root, 'media', 'settings.js'), 'utf8').includes("['desktop', 'cli', 'ark']"));
+
 console.log('\n结果：PASS ' + pass + '，FAIL ' + fail);
 process.exit(fail ? 1 : 0);
