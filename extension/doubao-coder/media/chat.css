@@ -1,0 +1,2130 @@
+/* 豆包编程助手 —— 侧边栏聊天样式。全部使用 VS Code 主题变量，自动适配明暗主题。 */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  color: var(--vscode-foreground);
+  background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ------------------------------- 顶栏 ------------------------------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border, var(--vscode-panel-border));
+  flex: 0 0 auto;
+}
+
+.topbar .logo {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+
+.topbar .title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.topbar .name {
+  font-weight: 600;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar .meta {
+  font-size: 11px;
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar .actions {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+button {
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+  background: var(--vscode-button-secondaryBackground, transparent);
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--vscode-button-secondaryHoverBackground, var(--vscode-toolbar-hoverBackground));
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button.primary {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  padding: 5px 14px;
+  font-size: 12px;
+}
+
+button.primary:hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
+button.danger {
+  background: var(--vscode-inputValidation-errorBackground, #a1260d);
+  color: var(--vscode-button-foreground, #fff);
+}
+
+button.link {
+  background: transparent;
+  border: none;
+  color: var(--vscode-textLink-foreground);
+  padding: 2px 4px;
+  font-size: 11px;
+}
+
+button.link:hover {
+  text-decoration: underline;
+}
+
+/* ------------------------------- 消息区 ------------------------------- */
+
+.messages {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.empty {
+  /* 空状态卡片：在消息区水平 + 垂直居中 */
+  margin: auto;
+  width: min(100%, 430px);
+  box-sizing: border-box;
+  padding: 20px 22px 18px;
+  border: 1px solid var(--vscode-widget-border, rgba(127, 127, 127, 0.22));
+  border-radius: 14px;
+  background: var(--vscode-editorWidget-background, rgba(127, 127, 127, 0.07));
+  box-shadow: var(--vscode-widget-shadow, 0 6px 18px rgba(0, 0, 0, 0.16));
+  opacity: 1;
+}
+
+.empty-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid var(--vscode-widget-border, rgba(127, 127, 127, 0.25));
+  box-shadow: var(--vscode-widget-shadow, 0 6px 18px rgba(0, 0, 0, 0.18));
+  background: var(--vscode-editorWidget-background, var(--vscode-sideBar-background, transparent));
+}
+
+.empty-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.empty-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 14px;
+}
+
+.empty-title::before {
+  content: "✦";
+  color: var(--vscode-textLink-foreground);
+  font-size: 16px;
+}
+
+.hints {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  opacity: 0.9;
+}
+
+.hints li {
+  position: relative;
+  padding-left: 16px;
+}
+
+.hints li::before {
+  content: "›";
+  position: absolute;
+  left: 0;
+  color: var(--vscode-textLink-foreground);
+  font-weight: 700;
+}
+
+.hints code,
+.msg code {
+  font-family: var(--vscode-editor-font-family, monospace);
+  background: var(--vscode-textCodeBlock-background, rgba(127, 127, 127, 0.15));
+  border-radius: 3px;
+  padding: 0 3px;
+}
+
+kbd {
+  border: 1px solid var(--vscode-panel-border, #888);
+  border-radius: 3px;
+  padding: 0 3px;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 10px;
+}
+
+.msg {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 100%;
+}
+
+.msg-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.avatar {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.msg-body {
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.msg-body p {
+  margin: 0 0 6px;
+}
+
+.msg-body p:last-child {
+  margin-bottom: 0;
+}
+
+.msg-body ul,
+.msg-body ol {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.msg-body h3,
+.msg-body h4,
+.msg-body h5,
+.msg-body h6 {
+  margin: 10px 0 4px;
+  font-size: 12px;
+}
+
+.msg-body blockquote {
+  margin: 4px 0;
+  padding-left: 8px;
+  border-left: 2px solid var(--vscode-textBlockQuote-border, #888);
+  opacity: 0.85;
+}
+
+.msg-body a {
+  color: var(--vscode-textLink-foreground);
+}
+
+.msg-user .msg-body {
+  background: var(--vscode-input-background, rgba(127, 127, 127, 0.1));
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: 6px;
+  padding: 6px 8px;
+  white-space: pre-wrap;
+}
+
+.msg-error .msg-body {
+  border: 1px solid var(--vscode-inputValidation-errorBorder, #be1100);
+  background: var(--vscode-inputValidation-errorBackground, rgba(190, 17, 0, 0.1));
+  border-radius: 6px;
+  padding: 6px 8px;
+  white-space: pre-wrap;
+}
+
+.cursor {
+  display: inline-block;
+  animation: blink 1s steps(2, start) infinite;
+  opacity: 0.8;
+}
+
+@keyframes blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+
+/* ------------------------------- 图片消息 ------------------------------- */
+
+.msg-image {
+  margin: 4px 0 2px;
+}
+
+.msg-image img {
+  display: block;
+  max-width: 100%;
+  max-height: 420px;
+  border-radius: 6px;
+  border: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.35));
+  background: var(--vscode-textCodeBlock-background, rgba(127, 127, 127, 0.08));
+  cursor: zoom-in;
+}
+
+.msg-image.failed img {
+  display: none;
+}
+
+.msg-image .image-open {
+  margin-top: 2px;
+  padding: 1px 6px;
+  font-size: 10px;
+  border: none;
+  background: transparent;
+  color: var(--vscode-textLink-foreground);
+}
+
+.msg-image .image-open:hover {
+  text-decoration: underline;
+}
+
+.inline-image {
+  max-width: 100%;
+  border-radius: 4px;
+  vertical-align: middle;
+}
+
+/* ------------------------------- 代码块 ------------------------------- */
+
+.code-block {
+  border: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.35));
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 6px 0;
+  background: var(--vscode-textCodeBlock-background, rgba(127, 127, 127, 0.08));
+}
+
+.code-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 6px;
+  background: var(--vscode-editorGroupHeader-tabsBackground, rgba(127, 127, 127, 0.12));
+  border-bottom: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.25));
+}
+
+.code-lang {
+  font-size: 10px;
+  opacity: 0.7;
+  text-transform: lowercase;
+}
+
+.code-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.code-btn {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.code-block pre {
+  margin: 0;
+  padding: 8px;
+  overflow-x: auto;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: var(--vscode-editor-font-size, 12px);
+  line-height: 1.45;
+}
+
+.code-block code {
+  background: transparent;
+  padding: 0;
+  white-space: pre;
+}
+
+/* ------------------------------- 工具卡片 ------------------------------- */
+
+.tool-card {
+  border: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.35));
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 11px;
+  background: var(--vscode-editorWidget-background, transparent);
+}
+
+.tool-card.running {
+  border-color: var(--vscode-progressBar-background, #0e70c0);
+}
+
+.tool-card.ok {
+  border-left: 3px solid var(--vscode-testing-iconPassed, #388a34);
+}
+
+.tool-card.failed {
+  border-left: 3px solid var(--vscode-testing-iconFailed, #be1100);
+}
+
+.tool-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.tool-icon {
+  opacity: 0.8;
+}
+
+.tool-name {
+  font-weight: 600;
+}
+
+.tool-arg {
+  opacity: 0.7;
+  font-family: var(--vscode-editor-font-family, monospace);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1 1 auto;
+}
+
+.tool-state {
+  margin-left: auto;
+  opacity: 0.8;
+  flex: 0 0 auto;
+}
+
+.tool-card.running .tool-state {
+  color: var(--vscode-progressBar-background, #0e70c0);
+}
+
+.tool-detail,
+.tool-result {
+  margin: 6px 0 0;
+  padding: 6px;
+  max-height: 220px;
+  overflow: auto;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 10.5px;
+  line-height: 1.45;
+  background: var(--vscode-textCodeBlock-background, rgba(127, 127, 127, 0.08));
+  border-radius: 4px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+
+/* ------------------------------- 输入区（对齐豆包桌面端） ------------------------------- */
+
+.composer {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.25));
+  padding: 8px 10px 6px;
+}
+
+.composer-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 6px 5px 8px;
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border, rgba(127, 127, 127, 0.4)));
+  border-radius: 12px;
+  background: var(--vscode-input-background);
+}
+
+.composer-box:focus-within {
+  border-color: var(--vscode-focusBorder);
+}
+
+#input {
+  width: 100%;
+  min-height: 38px;
+  max-height: 160px;
+  padding: 4px 4px 2px;
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--vscode-input-foreground);
+  font-family: inherit;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+#input::placeholder {
+  color: var(--vscode-input-placeholderForeground, rgba(127, 127, 127, 0.85));
+}
+
+.composer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.toolbar-left::-webkit-scrollbar {
+  display: none;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 24px;
+  max-width: 160px;
+  padding: 0 8px;
+  flex: 0 0 auto;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--vscode-foreground);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pill:hover {
+  background: var(--vscode-toolbar-hoverBackground, rgba(127, 127, 127, 0.14));
+}
+
+.pill.active {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.pill.active:hover {
+  background: var(--vscode-button-hoverBackground, var(--vscode-button-background));
+}
+
+.pill.on {
+  color: var(--vscode-textLink-foreground);
+}
+
+.pill .caret {
+  font-size: 9px;
+  opacity: 0.65;
+}
+
+.pill.model-pill {
+  max-width: 158px;
+  background: var(--vscode-toolbar-hoverBackground, rgba(127, 127, 127, 0.12));
+  overflow: hidden;
+}
+
+.icon-btn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--vscode-foreground);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.icon-btn:hover {
+  background: var(--vscode-toolbar-hoverBackground, rgba(127, 127, 127, 0.14));
+}
+
+.send-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.send-btn:hover {
+  background: var(--vscode-button-hoverBackground, var(--vscode-button-background));
+}
+
+.send-btn:disabled {
+  opacity: 0.5;
+}
+
+.composer-hints {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 0;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.composer-hints .status {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-hints .hint {
+  flex: 0 0 auto;
+  opacity: 0.8;
+}
+
+/* ------------------------------- 弹出菜单（对齐豆包） ------------------------------- */
+
+.popup-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 170px;
+  max-width: 280px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border, rgba(127, 127, 127, 0.35)));
+  border-radius: 8px;
+  background: var(--vscode-menu-background, var(--vscode-dropdown-background, var(--vscode-editorWidget-background, transparent)));
+  color: var(--vscode-menu-foreground, var(--vscode-foreground));
+  box-shadow: var(--vscode-widget-shadow, 0 6px 20px rgba(0, 0, 0, 0.22));
+  font-size: 12px;
+}
+
+.menu-search {
+  display: block;
+  width: 100%;
+  margin: 2px 0 4px;
+  padding: 5px 8px;
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border, rgba(127, 127, 127, 0.35)));
+  border-radius: 5px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font-family: inherit;
+  font-size: 11px;
+  outline: none;
+}
+
+.menu-search:focus {
+  border-color: var(--vscode-focusBorder);
+}
+
+.menu-heading {
+  padding: 6px 8px 2px;
+  font-size: 10px;
+  opacity: 0.55;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.menu-item:hover {
+  background: var(--vscode-menu-selectionBackground, rgba(90, 93, 94, 0.32));
+}
+
+.menu-check {
+  width: 14px;
+  flex: 0 0 auto;
+  text-align: center;
+  opacity: 0.9;
+}
+
+.menu-label {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menu-desc {
+  flex: 0 0 auto;
+  font-size: 10px;
+  opacity: 0.55;
+}
+
+.menu-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--vscode-menu-separatorBackground, rgba(127, 127, 127, 0.25));
+}
+
+/* ===== 工具卡片：对齐豆包桌面端的 tool 胶囊样式 ===== */
+.tool-card {
+  margin: 6px 0 10px;
+  border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.22));
+  border-radius: 10px;
+  background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.06));
+  overflow: hidden;
+  border-left: 3px solid rgba(128, 128, 128, 0.45);
+}
+.tool-card.running { border-left-color: var(--vscode-charts-yellow, #d9a441); }
+.tool-card.ok { border-left-color: var(--vscode-charts-green, #3fa45b); }
+.tool-card.failed { border-left-color: var(--vscode-errorForeground, #d9534f); }
+
+.tool-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.tool-chip {
+  flex: none;
+  font: 11px/1.6 ui-monospace, Consolas, monospace;
+  color: var(--vscode-descriptionForeground, #999);
+  border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.28));
+  border-radius: 5px;
+  padding: 0 6px;
+}
+.tool-caret {
+  flex: none;
+  color: var(--vscode-descriptionForeground, #999);
+  font-size: 11px;
+  transition: transform 0.15s ease;
+}
+.tool-card.expanded .tool-caret { transform: rotate(180deg); }
+
+.tool-json {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 12px/1.7 ui-monospace, Consolas, monospace;
+  color: var(--vscode-foreground);
+  opacity: 0.9;
+}
+.tool-copy {
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--vscode-descriptionForeground, #999);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0 2px;
+}
+.tool-copy:hover { color: var(--vscode-foreground); }
+
+.tool-detail,
+.tool-result {
+  margin: 0;
+  padding: 8px 12px;
+  border-top: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.18));
+  font: 12px/1.6 ui-monospace, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 260px;
+  overflow: auto;
+  background: var(--vscode-editor-background, transparent);
+}
+.tool-result { opacity: 0.85; }
+.tool-detail.hidden { display: none; }
+
+/* ===== 建议追问 chip（豆包底部的「xxx →」） ===== */
+.suggest-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 14px;
+  padding: 0 2px;
+}
+.suggest-chip {
+  border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.3));
+  background: transparent;
+  color: var(--vscode-foreground);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.88;
+}
+.suggest-chip:hover {
+  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.14));
+  opacity: 1;
+}
+
+/* ===== 执行中等待提示（转圈 + 文案 + 计时） ===== */
+.pending {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 2px 12px;
+  color: var(--vscode-descriptionForeground, #9a9a9a);
+  font-size: 12.5px;
+}
+.pending.show { display: flex; }
+
+.pending-spinner {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border-radius: 50%;
+  border: 1.6px solid currentColor;
+  border-right-color: transparent;
+  animation: pending-spin 0.75s linear infinite;
+}
+@keyframes pending-spin { to { transform: rotate(360deg); } }
+
+.pending-label { white-space: nowrap; }
+
+.pending-dots { display: inline-flex; gap: 3px; margin-left: 2px; }
+.pending-dots .dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.35;
+  animation: pending-bounce 1.1s ease-in-out infinite;
+}
+.pending-dots .dot:nth-child(2) { animation-delay: 0.15s; }
+.pending-dots .dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes pending-bounce {
+  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-2px); }
+}
+
+.pending-time {
+  font: 11.5px ui-monospace, Consolas, monospace;
+  opacity: 0.7;
+  margin-left: 2px;
+}
+
+/* 流式光标呼吸 */
+.cursor { animation: cursor-blink 1s steps(2, start) infinite; }
+@keyframes cursor-blink { 50% { opacity: 0; } }
+
+/* 工具卡片执行中：轻微呼吸边条 */
+.tool-card.running { animation: tool-pulse 1.4s ease-in-out infinite; }
+@keyframes tool-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 0 transparent; }
+  50% { box-shadow: inset 0 0 0 1px var(--vscode-charts-yellow, rgba(217, 164, 65, 0.45)); }
+}
+/* ===== 附件条（+ 上传的文件/图片） ===== */
+.attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 6px;
+  padding: 0 2px;
+}
+.attachments[hidden] { display: none; }
+.attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 260px;
+  border: 1px solid var(--vscode-panel-border, rgba(128,128,128,.3));
+  background: var(--vscode-editorWidget-background, rgba(128,128,128,.08));
+  border-radius: 7px;
+  padding: 2px 4px 2px 8px;
+  font-size: 12px;
+}
+.attachment-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attachment-del {
+  border: none;
+  background: none;
+  color: var(--vscode-descriptionForeground, #999);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.attachment-del:hover { color: var(--vscode-foreground); }
+
+.pending-cancel {
+  margin-left: 6px;
+  border: 1px solid var(--vscode-panel-border, rgba(128,128,128,.3));
+  background: transparent;
+  color: var(--vscode-descriptionForeground, #999);
+  border-radius: 6px;
+  font-size: 11px;
+  padding: 0 6px;
+  cursor: pointer;
+  line-height: 18px;
+}
+.pending-cancel:hover { color: var(--vscode-foreground); }
+
+.pending.stalled .pending-label { color: var(--vscode-warningForeground, #d9a441); }
+.pending.stalled .pending-time { color: var(--vscode-warningForeground, #d9a441); opacity: 0.85; }
+/* ===== 快捷技能条（图像生成 / 视频生成 / PPT 生成 …） ===== */
+.quick-skills {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 2px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+.quick-skills:empty { display: none; }
+.quick-skill {
+  white-space: nowrap;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.85;
+}
+.quick-skill:hover { opacity: 1; }
+/* 对话模式快捷能力；hidden 必须真正隐藏，避免被 .pill 的 display 覆盖 */
+[hidden] { display: none !important; }
+.quick-chat { display: inline-flex; align-items: center; gap: 6px; }
+.quick-chat .chat-action { color: var(--vscode-textLink-foreground); }
+/* ===== 助手气泡下的「共用时 N 秒」 ===== */
+.msg-meta {
+  margin: 6px 0 0 2px;
+  font-size: 11.5px;
+  color: var(--vscode-descriptionForeground, #8f8f8f);
+  opacity: 0.85;
+}
+/* ===== 助手气泡底部操作条：复制 / 重新生成 / 删除 ===== */
+.msg-actions {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0 0 2px;
+}
+.msg-action {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--vscode-descriptionForeground, #8f8f8f);
+  border-radius: 6px;
+  font-size: 11.5px;
+  padding: 1px 6px;
+  cursor: pointer;
+}
+.msg-action:hover {
+  color: var(--vscode-foreground);
+  border-color: var(--vscode-panel-border, rgba(128,128,128,.3));
+  background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,.12));
+}
+
+/* ================= 对话区：对齐豆包的消息排版 ================= */
+
+/* 用户消息：右对齐气泡，无头像 */
+.msg-user {
+  display: flex;
+  justify-content: flex-end;
+}
+.msg-user .msg-body {
+  max-width: 82%;
+}
+.msg-bubble {
+  background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.14));
+  border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.18));
+  border-radius: 12px;
+  padding: 10px 12px 6px;
+}
+.msg-bubble .plain {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.65;
+}
+.msg-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 6px;
+}
+.msg-foot-assistant {
+  justify-content: flex-start;
+}
+.msg-time {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground, #8a8a8a);
+  opacity: 0.8;
+}
+
+/* 助手消息：全宽，靠左 */
+.msg-assistant {
+  display: block;
+}
+.msg-assistant .msg-body {
+  max-width: 100%;
+}
+
+/* 分隔线：已处理 / 共用时 X 分 Y 秒（与豆包一致，放在该条回答的顶部） */
+.turn-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 2px 12px;
+}
+.turn-rule {
+  flex: 1 1 auto;
+  height: 0;
+  border-top: 1px dashed var(--db-divider, var(--vscode-panel-border, rgba(128, 128, 128, 0.35)));
+  background: none;
+}
+.turn-label {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--vscode-descriptionForeground, #8f8f8f);
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+/* 图片窄一点，跟豆包一样不铺满 */
+.msg-image img,
+.msg-body img {
+  max-width: 420px;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+}
+
+/* 隐藏旧的头部标签（我/你、豆/豆包） */
+.msg-head { display: none; }
+/* ===== 工具栏溢出按钮 ===== */
+.overflow-btn {
+  flex: none;
+  opacity: 0.9;
+}
+.overflow-btn[hidden] { display: none; }
+.toolbar-left { min-width: 0; overflow: hidden; }
+/* ===== 窄面板：给左侧留空间，模型名收窄 ===== */
+.toolbar-left { flex: 1 1 auto; }
+.toolbar-right { flex: 0 0 auto; }
+@media (max-width: 560px) {
+  .toolbar-left { gap: 4px; }
+  .model-pill {
+    max-width: 96px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .composer-toolbar { gap: 2px; }
+}
+/* --------------------------- 历史对话管理 --------------------------- */
+body { position: relative; }
+.history-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  background: var(--vscode-editor-background);
+  display: flex;
+  flex-direction: column;
+}
+.history-sheet {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  gap: 12px;
+}
+.history-head { display: flex; align-items: center; gap: 10px; }
+.history-title { flex: 1; font-size: 15px; font-weight: 600; }
+.history-tools { display: flex; flex-direction: column; gap: 9px; }
+.history-search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--vscode-input-border, rgba(127,127,127,.35));
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  outline: none;
+  font-size: 12px;
+}
+.history-search:focus { border-color: var(--vscode-focusBorder); }
+.history-tabs { display: flex; gap: 4px; }
+.history-tab {
+  border: 0;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  padding: 4px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.history-tab.on {
+  background: var(--vscode-button-secondaryBackground, rgba(127,127,127,.18));
+  color: var(--vscode-button-secondaryForeground, inherit);
+}
+.history-list { flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.history-row { display: flex; align-items: center; gap: 8px; padding: 7px 6px; border-radius: 8px; }
+.history-row:hover { background: var(--vscode-list-hoverBackground, rgba(127,127,127,.12)); }
+.history-checkbox { width: 14px; height: 14px; flex: 0 0 auto; }
+.history-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+  padding: 2px 0;
+}
+.history-row-title { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.history-row-meta { display: block; font-size: 11px; opacity: .6; margin-top: 2px; }
+.history-actions { display: flex; gap: 2px; flex: 0 0 auto; opacity: .55; transition: opacity .12s; }
+.history-row:hover .history-actions { opacity: 1; }
+.history-action {
+  border: 0;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  padding: 3px 5px;
+  border-radius: 5px;
+  font-size: 13px;
+}
+.history-action:hover { background: var(--vscode-toolbar-hoverBackground); color: var(--vscode-foreground); }
+.history-empty { padding: 28px 12px; text-align: center; opacity: .55; font-size: 12px; line-height: 1.7; }
+.history-batchbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--vscode-panel-border, rgba(127,127,127,.2));
+}
+.history-select-all { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
+.history-count { flex: 1; font-size: 12px; opacity: .7; }
+.history-batchbar button { border: 0; border-radius: 6px; padding: 5px 10px; cursor: pointer; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
+.history-batchbar button.danger { background: var(--vscode-inputValidation-errorBackground, #5a1d1d); color: inherit; }
+/* ===== 首次使用引导卡片 ===== */
+.setup-card {
+  margin: 10px 2px 16px;
+  border: 1px solid var(--vscode-panel-border, rgba(128,128,128,.28));
+  border-radius: 12px;
+  background: var(--vscode-editorWidget-background, rgba(128,128,128,.07));
+  padding: 12px 14px;
+}
+.setup-head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.setup-title { font-weight: 600; font-size: 13.5px; }
+.setup-sub { font-size: 12px; color: var(--vscode-descriptionForeground, #9a9a9a); line-height: 1.5; }
+.setup-steps { display: flex; flex-direction: column; gap: 8px; }
+.setup-step { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.setup-dot {
+  flex: none; width: 18px; height: 18px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; border: 1px solid var(--vscode-panel-border, rgba(128,128,128,.4));
+  color: var(--vscode-descriptionForeground, #9a9a9a);
+}
+.setup-step.done .setup-dot { border-color: var(--vscode-charts-green, #3fa45b); color: var(--vscode-charts-green, #3fa45b); }
+.setup-step.done .setup-step-title { opacity: .65; text-decoration: line-through; }
+.setup-step-title { flex: 1 1 auto; }
+.setup-action {
+  flex: none; border: 1px solid var(--vscode-button-background, #0e639c);
+  background: var(--vscode-button-background, #0e639c);
+  color: var(--vscode-button-foreground, #fff);
+  border-radius: 6px; font-size: 11.5px; padding: 2px 10px; cursor: pointer;
+}
+.setup-action.ghost {
+  background: transparent; color: var(--vscode-foreground);
+  border-color: var(--vscode-panel-border, rgba(128,128,128,.4));
+}
+.setup-foot { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.setup-path { font-size: 11px; color: var(--vscode-descriptionForeground, #8a8a8a); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ================= 明暗主题微调 ================= */
+
+/* 浅色：边框和分隔线适当加深，否则几乎看不见 */
+body.vscode-light .msg-bubble {
+  background: var(--vscode-editorWidget-background, rgba(0, 0, 0, 0.035));
+  border-color: var(--vscode-panel-border, rgba(0, 0, 0, 0.12));
+}
+body.vscode-light .turn-rule {
+  background: var(--vscode-panel-border, rgba(0, 0, 0, 0.12));
+}
+body.vscode-light .tool-card,
+body.vscode-light .setup-card {
+  border-color: var(--vscode-panel-border, rgba(0, 0, 0, 0.14));
+}
+body.vscode-light .tool-detail,
+body.vscode-light .tool-result {
+  border-top-color: var(--vscode-panel-border, rgba(0, 0, 0, 0.1));
+}
+body.vscode-light .suggest-chip,
+body.vscode-light .attachment-chip {
+  border-color: var(--vscode-panel-border, rgba(0, 0, 0, 0.18));
+}
+
+/* 深色：分隔线不用太亮 */
+body.vscode-dark .turn-rule,
+body.vscode-high-contrast .turn-rule {
+  background: var(--vscode-panel-border, rgba(255, 255, 255, 0.14));
+}
+
+/* 高对比度：去掉半透明，全用实色边框 */
+body.vscode-high-contrast .msg-bubble,
+body.vscode-high-contrast .tool-card,
+body.vscode-high-contrast .setup-card,
+body.vscode-high-contrast .suggest-chip {
+  border-color: var(--vscode-contrastBorder, currentColor);
+}
+/* 已执行代码：命令行等宽显示 */
+.tool-json.tool-cmd {
+  font-family: var(--vscode-editor-font-family, Consolas, monospace);
+  font-size: 12px;
+  opacity: 0.95;
+}
+/* ================= 一行式工具执行记录（对齐豆包「已执行代码」） ================= */
+.tool-line {
+  margin: 3px 0;
+}
+.tool-line-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 2px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.tool-line-head:hover {
+  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.1));
+}
+.tool-line-chip {
+  flex: none;
+  font: 11px/1.5 var(--vscode-editor-font-family, Consolas, monospace);
+  color: var(--vscode-descriptionForeground, #8f8f8f);
+  opacity: 0.9;
+}
+.tool-line-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 12px/1.5 var(--vscode-editor-font-family, Consolas, monospace);
+  opacity: 0.9;
+}
+.tool-line-hint {
+  flex: none;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground, #8f8f8f);
+  opacity: 0.75;
+}
+.tool-line-state {
+  flex: none;
+  font-size: 11px;
+  width: 14px;
+  text-align: center;
+}
+.tool-line.running .tool-line-state {
+  color: var(--vscode-charts-yellow, #d9a441);
+  animation: tool-dot 1s ease-in-out infinite;
+}
+.tool-line.ok .tool-line-state { color: var(--vscode-charts-green, #3fa45b); }
+.tool-line.failed .tool-line-state { color: var(--vscode-errorForeground, #d9534f); }
+@keyframes tool-dot { 50% { opacity: 0.25; } }
+
+.tool-line-detail {
+  margin: 2px 0 6px 22px;
+  padding-left: 10px;
+  border-left: 2px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.25));
+}
+.tool-line-detail .tool-detail,
+.tool-line-detail .tool-result {
+  border-top: none;
+  padding: 4px 0;
+  background: transparent;
+  max-height: 240px;
+}
+
+/* ===== 历史条目状态徽标（待确认 / 执行中） ===== */
+.history-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 10.5px;
+  line-height: 16px;
+  color: var(--vscode-descriptionForeground, #8f8f8f);
+  border: 1px solid var(--vscode-panel-border, rgba(128,128,128,.35));
+}
+.history-badge.running {
+  color: var(--vscode-progressBar-background, #0e70c0);
+  border-color: var(--vscode-progressBar-background, #0e70c0);
+}
+
+/* ===== 任务分段卡片（对齐豆包的任务/计划块） ===== */
+.round-card {
+  margin: 12px 0 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.08));
+  border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.22));
+}
+.round-title {
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground, #8f8f8f);
+  margin-bottom: 6px;
+}
+.round-plan-line {
+  font-size: 12.5px;
+  line-height: 1.7;
+  opacity: 0.92;
+}
+.round-plan.collapsed .round-plan-line:nth-child(n+4) { display: none; }
+.round-more {
+  margin-top: 4px;
+  border: none;
+  background: none;
+  color: var(--vscode-textLink-foreground, #3794ff);
+  font-size: 11.5px;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* ===== 豆包原生分块 ===== */
+.block-status {
+  margin: 6px 0;
+  font-size: 11.5px;
+  color: var(--vscode-descriptionForeground, #8f8f8f);
+  opacity: 0.85;
+}
+.block-text { margin: 6px 0; }
+.block-text p:first-child { margin-top: 0; }
+
+/* ===== 豆包原生回复块 ===== */
+.native-blocks { margin: 4px 0 8px; }
+.native-blocks .block-text { margin: 6px 0; line-height: 1.7; }
+.native-blocks .block-text h1,
+.native-blocks .block-text h2,
+.native-blocks .block-text h3 { margin: 12px 0 6px; }
+.native-blocks .block-text ul,
+.native-blocks .block-text ol { margin: 6px 0; padding-left: 22px; }
+.native-blocks .block-text li { margin: 3px 0; }
+
+/* =====================================================================
+   设计令牌（从豆包真实页面 getComputedStyle 量得，见 artifacts/style-tokens*.json）
+   字体族/字号/行高/圆角/颜色都对齐；不复制其代码，只复现度量。
+   ===================================================================== */
+:root {
+  --db-font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --db-font-size: var(--vscode-font-size, 13px);
+  --db-line-height: 1.5;       /* 行高倍数：跟随字号 */
+  --db-radius-bubble: 12px;
+  --db-radius-inline: 4px;     /* 行内 code */
+  --db-radius-panel: 8px;      /* 表格/卡片底角 */
+  --db-fg: var(--vscode-foreground, rgba(0, 0, 0, 0.85));
+  --db-fg-strong: var(--vscode-foreground, rgba(0, 0, 0, 1));
+  --db-code-bg: var(--vscode-textCodeBlock-background, rgba(0, 0, 0, 0.06));
+  --db-content-max: 100%;      /* 跟随面板宽度（豆包是 435px，但这里跟随 VS Code） */
+}
+
+/* 消息区：字号 16 / 行高 24 / 内容宽度上限 */
+.native-blocks,
+.msg-assistant .msg-body {
+  font-family: var(--db-font-family);
+  font-size: var(--db-font-size);
+  line-height: var(--db-line-height);
+  max-width: var(--db-content-max);
+}
+.native-blocks .block-text,
+.msg-assistant .msg-body p,
+.msg-assistant .msg-body li {
+  font-size: var(--db-font-size);
+  line-height: var(--db-line-height);
+  margin: 0 0 12px;
+}
+
+/* 标题：h2 = 18/28/600 */
+.msg-assistant .msg-body h1 { font-size: 1.25em; line-height: 1.5; font-weight: 600; margin: 1.2em 0 0.5em; }
+.msg-assistant .msg-body h2 { font-size: 1.125em; line-height: 1.5; font-weight: 600; margin: 1.1em 0 0.45em; }
+.msg-assistant .msg-body h3 { font-size: 1em; line-height: 1.5; font-weight: 600; margin: 1em 0 0.4em; }
+
+/* 列表：左内边距 20px */
+.msg-assistant .msg-body ul,
+.msg-assistant .msg-body ol { padding-left: 20px; margin: 8px 0 12px; }
+.msg-assistant .msg-body li { margin: 0 0 4px; }
+
+/* 行内代码：14/21，圆角 4，底色 6% 黑 */
+.msg-assistant .msg-body code {
+  font-size: 0.9em;
+  line-height: 1.5;
+  background: var(--db-code-bg);
+  border-radius: var(--db-radius-inline);
+  padding: 0 4px;
+}
+
+/* 加粗 */
+.msg-assistant .msg-body strong { font-weight: 700; }
+
+/* 用户气泡圆角 12 */
+.msg-bubble { border-radius: var(--db-radius-bubble); }
+.msg-bubble .plain { font-size: var(--db-font-size); line-height: var(--db-line-height); }
+
+/* 表格底角 8 */
+.msg-assistant .msg-body table { border-radius: 0 0 var(--db-radius-panel) var(--db-radius-panel); }
+
+/* =====================================================================
+   令牌的明暗自适应：同一套变量，按 VS Code 主题切换取值
+   ===================================================================== */
+
+/* 兜底：变量缺失时的中性命色（用 currentColor 混出，明暗都不刺眼） */
+:root {
+  --db-code-bg: var(--vscode-textCodeBlock-background, rgba(127, 127, 127, 0.14));
+  --db-muted: var(--vscode-descriptionForeground, rgba(127, 127, 127, 0.9));
+  --db-divider: var(--vscode-panel-border, rgba(127, 127, 127, 0.28));
+}
+
+/* 浅色主题：加深文字与分隔线、代码底更浅 */
+body.vscode-light {
+  --db-fg: var(--vscode-foreground, rgba(0, 0, 0, 0.85));
+  --db-fg-strong: var(--vscode-foreground, #000000);
+  --db-code-bg: var(--vscode-textCodeBlock-background, rgba(0, 0, 0, 0.06));
+  --db-muted: var(--vscode-descriptionForeground, rgba(0, 0, 0, 0.6));
+  --db-divider: var(--vscode-panel-border, rgba(0, 0, 0, 0.12));
+}
+
+/* 深色主题：文字提亮、代码底降低透明度、分隔线压暗 */
+body.vscode-dark,
+body.vscode-high-contrast {
+  --db-fg: var(--vscode-foreground, rgba(255, 255, 255, 0.88));
+  --db-fg-strong: var(--vscode-foreground, #ffffff);
+  --db-code-bg: var(--vscode-textCodeBlock-background, rgba(255, 255, 255, 0.1));
+  --db-muted: var(--vscode-descriptionForeground, rgba(255, 255, 255, 0.6));
+  --db-divider: var(--vscode-panel-border, rgba(255, 255, 255, 0.16));
+}
+
+/* 令牌生效：正文文字/代码/分隔线统一走主题值 */
+.msg-assistant .msg-body,
+.native-blocks,
+.msg-bubble .plain {
+  color: var(--db-fg);
+}
+.msg-assistant .msg-body h1,
+.msg-assistant .msg-body h2,
+.msg-assistant .msg-body h3,
+.msg-assistant .msg-body strong {
+  color: var(--db-fg-strong);
+}
+.msg-assistant .msg-body code {
+  background: var(--db-code-bg);
+  color: var(--db-fg);
+}
+.turn-rule,
+.msg-assistant .msg-body hr {
+  background: var(--db-divider);
+  border-color: var(--db-divider);
+}
+.block-status,
+.msg-time,
+.turn-label,
+.pending-time {
+  color: var(--db-muted);
+}
+
+/* ===== AST 渲染：与豆包同度量 ===== */
+.ast-blocks {
+  font-family: var(--db-font-family);
+  font-size: var(--db-font-size);
+  line-height: var(--db-line-height);
+  color: var(--db-fg);
+  max-width: var(--db-content-max);
+}
+.ast-h1 { font-size: 1.25em; line-height: 1.5; font-weight: 600; margin: 1.2em 0 0.5em; }
+.ast-h2 { font-size: 1.125em; line-height: 1.5; font-weight: 600; margin: 1.1em 0 0.45em; }
+.ast-h3, .ast-h4, .ast-h5, .ast-h6 { font-size: 1em; line-height: 1.5; font-weight: 600; margin: 1em 0 0.4em; }
+.ast-p { margin: 0 0 12px; }
+.ast-p p:first-child { margin-top: 0; }
+.ast-list { margin: 8px 0 12px; padding-left: 20px; }
+.ast-list .ast-li { margin: 0 0 4px; font-size: var(--db-font-size); line-height: var(--db-line-height); }
+.ast-list .ast-li.lv1 { margin-left: 18px; }
+.ast-list .ast-li.lv2 { margin-left: 36px; }
+.ast-table {
+  border-collapse: collapse;
+  margin: 0.8em 0 1em;
+  font-size: 0.95em;
+  max-width: 100%;
+  border-radius: 0 0 var(--db-radius-panel) var(--db-radius-panel);
+  overflow: hidden;
+}
+.ast-table th, .ast-table td {
+  border: 1px solid var(--db-divider);
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+.ast-table th { font-weight: 600; background: var(--db-code-bg); }
+.ast-code {
+  margin: 10px 0 14px;
+  padding: 10px 12px;
+  background: var(--db-code-bg);
+  border-radius: 8px;
+  overflow: auto;
+}
+.ast-code pre { margin: 0; font-size: 0.9em; line-height: 1.5; }
+.ast-cmd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+  font-family: var(--vscode-editor-font-family, Consolas, monospace);
+  font-size: 0.9em;
+  color: var(--db-muted);
+}
+.ast-cmd-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ===== 执行反馈（step）：与豆包 thinking 步骤行同形 ===== */
+.ast-step { margin: 1px 0; padding: 1px 4px; border-radius: 6px; font-size: 14px; line-height: 21px; color: var(--db-muted); }
+/* 执行中的步骤：高亮底 + 正常字色，不用蓝色、不做颜色过渡 */
+.ast-step.is-running {
+  background: rgba(127, 127, 127, 0.16);
+}
+/* 执行中的标题后面跟三个跳动的点（像「深度求索中，用时 …」那样） */
+.ast-step-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+  flex: none;
+}
+.ast-step-dots i {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.35;
+  animation: ast-dot 1.2s ease-in-out infinite;
+}
+.ast-step-dots i:nth-child(2) { animation-delay: 0.18s; }
+.ast-step-dots i:nth-child(3) { animation-delay: 0.36s; }
+@keyframes ast-dot {
+  0%, 100% { opacity: 0.25; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-1px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ast-step-dots i { animation: none; opacity: 0.6; }
+}
+.ast-step.is-running .ast-step-head { min-height: 21px; }
+.ast-step-head { display: flex; align-items: center; gap: 4px; min-height: 21px; cursor: pointer; }
+.ast-step-icon { width: 16px; flex: none; text-align: center; font-size: 15px; line-height: 1; opacity: .65; }
+/* 与豆包一致：超长标题不是硬省略号，而是右侧渐隐（mask），文字颜色变化带过渡 */
+.ast-step-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: clip;
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 86%, transparent 100%);
+  mask-image: linear-gradient(90deg, #000 0%, #000 86%, transparent 100%);
+  /* 颜色固定：完成态用前景色（白/黑），不做变色动画 */
+  color: var(--db-fg);
+}
+.ast-step.is-running .ast-step-title {
+  /* 执行中：不用彩色，靠高亮底色 + 更亮的字重区分 */
+  color: var(--db-fg);
+  font-weight: 500;
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 82%, transparent 100%);
+  mask-image: linear-gradient(90deg, #000 0%, #000 82%, transparent 100%);
+}
+.ast-step.is-open .ast-step-title {
+  -webkit-mask-image: none;
+  mask-image: none;
+  white-space: normal;
+}
+.ast-step-chevron { flex: none; font-size: 12px; opacity: .55; }
+.ast-step-detail {
+  margin: 4px 0 8px 20px;
+  padding: 8px 10px;
+  max-height: 240px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--db-code-bg);
+  border-radius: 6px;
+  font-family: var(--vscode-editor-font-family, Consolas, monospace);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--db-fg);
+}
+.ast-step.is-running .ast-step-icon { color: var(--db-fg); opacity: 0.8; }
+.ast-step.is-error .ast-step-title { color: #e05d5d; }
+.ast-step.is-error .ast-step-icon { color: #e05d5d; }
+/* 每类动作一个图标，与豆包一致：</> 终端 / 书本 读取 / 放大镜 查找 / 铅笔 修改 … */
+/* 点击步骤行展开的「本轮执行过程」列表（豆包折叠后旧步骤也能看到） */
+.ast-step-log {
+  margin: 2px 0 8px 20px;
+  padding: 4px 0 4px 10px;
+  border-left: 1px solid var(--db-divider, rgba(128, 128, 128, 0.35));
+}
+.ast-step-log.hidden { display: none; }
+.ast-step-log-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 20px;
+  font-size: 12.5px;
+  line-height: 20px;
+  color: var(--db-muted);
+}
+.ast-step-log-row .ast-step-icon {
+  width: 16px;
+  font-size: 12px;
+}
+.ast-step-log-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 连续步骤收进一个可折叠分组：执行过程 · N 步 */
+.ast-steps {
+  /* 统一背景：无论步骤多少、是否在跑，执行过程都放在同一个浅色卡片里 */
+  margin: 6px 0;
+  padding: 4px 8px 6px;
+  background: rgba(127, 127, 127, 0.09);
+  border: 1px solid var(--db-divider, rgba(128, 128, 128, 0.22));
+  border-radius: 9px;
+}
+.ast-steps-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 21px;
+  cursor: pointer;
+  color: var(--db-muted);
+  font-size: 12px;
+  line-height: 21px;
+  user-select: none;
+}
+.ast-steps-title { flex: 1 1 auto; min-width: 0; }
+.ast-steps-chevron { flex: none; opacity: 0.6; }
+.ast-steps-body {
+  margin-top: 2px;
+  /* 列表最多占大半屏，超出在卡片内部滚动，避免把“收起”按钮顶出视野 */
+  max-height: min(56vh, 620px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.ast-steps-body.hidden { display: none; }
+.ast-steps-collapse {
+  display: block;
+  width: 100%;
+  margin: 2px 0 8px;
+  padding: 4px 0;
+  border: 0;
+  border-top: 1px dashed var(--db-divider, rgba(128, 128, 128, 0.3));
+  background: transparent;
+  color: var(--db-muted);
+  font-size: 12px;
+  line-height: 20px;
+  cursor: pointer;
+}
+.ast-steps-collapse:hover { color: var(--db-fg); }
+.ast-steps-collapse.hidden { display: none; }
+
+.ast-step-icon svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+  margin: 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.35;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ast-step-icon.icon-code {
+  font-family: var(--vscode-editor-font-family, Consolas, monospace);
+  font-size: 10.5px;
+  letter-spacing: -0.6px;
+}
+.step-spin {
+  display: block;
+  width: 12px;
+  height: 12px;
+  margin: 0 auto;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  animation: step-spin 0.9s linear infinite;
+}
+@keyframes step-spin { to { transform: rotate(360deg); } }
+
+/* ===== 等待动效：对齐豆包「已处理 N 秒」+「正在执行代码」 ===== */
+.turn-label {
+  font-size: 12px;
+  color: var(--db-muted);
+  font-variant-numeric: tabular-nums;
+}
+.turn-rule {
+  background: var(--db-divider);
+}
+.tool-line.running .tool-line-text {
+  background: linear-gradient(90deg, currentColor 0%, currentColor 40%, transparent 60%, currentColor 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: cmd-shimmer 1.6s linear infinite;
+}
+@keyframes cmd-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+.tool-line.running .tool-line-state { opacity: .9; }
+
+/* 用户气泡里的粘贴图片 */
+.bubble-images { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.bubble-images img {
+  max-width: 180px;
+  max-height: 140px;
+  border-radius: 8px;
+  border: 1px solid var(--db-divider);
+  object-fit: cover;
+}
+
+/* 用户气泡里的文件名 */
+.bubble-files { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.bubble-file {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 6px;
+  background: var(--db-code-bg);
+  border: 1px solid var(--db-divider);
+  font-size: 0.85em; max-width: 260px;
+}
+.bubble-file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* =====================================================================
+   AST 块补全状态：长内容折叠 / 代码复制 / 命令点击复制 / 错误卡片
+   ===================================================================== */
+
+/* 长内容折叠：只作用于段落 / 列表 / 表格，代码块有自己的滚动条不折叠。 */
+.ast-fold { margin: 0; }
+.ast-fold.collapsed .ast-fold-body {
+  max-height: calc(var(--db-line-height) * 12em);
+  overflow: hidden;
+}
+.ast-expand {
+  display: inline-flex;
+  align-items: center;
+  margin: 2px 0 10px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--vscode-textLink-foreground, #3794ff);
+  font-size: 12px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.ast-expand:hover { text-decoration: underline; }
+
+/* 代码块右上角复制按钮 */
+.ast-code { position: relative; }
+.ast-code pre { padding-right: 52px; }
+.ast-code-copy {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 1;
+  padding: 2px 8px;
+  border: 1px solid var(--db-divider);
+  border-radius: 4px;
+  background: var(--vscode-button-secondaryBackground, rgba(127, 127, 127, 0.16));
+  color: var(--vscode-button-secondaryForeground, var(--db-fg));
+  font-size: 11px;
+  line-height: 1.4;
+  cursor: pointer;
+  opacity: 0.85;
+}
+.ast-code-copy:hover { opacity: 1; }
+.ast-code-copy.copied {
+  color: var(--vscode-testing-iconPassed, #3fb950);
+  border-color: currentColor;
+}
+
+/* 命令结果：保持单行 `</> 命令`，整行可点击复制 */
+.ast-cmd { cursor: pointer; }
+.ast-cmd:hover { color: var(--db-fg); }
+.ast-cmd:hover .ast-cmd-text { text-decoration: underline; }
+
+/* 错误卡片 */
+.error-card {
+  border-radius: 8px;
+  border-left: 3px solid var(--vscode-errorForeground, #d9534f);
+  background: var(--vscode-inputValidation-errorBackground, rgba(217, 83, 79, 0.08));
+  padding: 10px 12px;
+  font-size: 0.95em;
+}
+/* 卡片本身已经是错误样式，内层不再重复画边框/底色 */
+.error-card .msg-body {
+  border: none;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  white-space: pre-wrap;
+}
+
+/* ===== P2 精度：代码块度量（实测 pre 13/22、外壳 padding 10/16、圆角 10） ===== */
+.ast-code {
+  padding: 10px 16px;
+  border-radius: 10px;
+}
+.ast-code pre {
+  font-size: 0.9em;
+  line-height: 1.7;
+}
+
+/* 图片放大层 */
+.img-zoom {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.78);
+  z-index: 90;
+  cursor: zoom-out;
+}
+.img-zoom.on { display: flex; }
+.img-zoom-img {
+  max-width: 92%;
+  max-height: 88%;
+  border-radius: 8px;
+  box-shadow: var(--vscode-widget-shadow, 0 10px 40px rgba(0, 0, 0, 0.5));
+}
+
+/* ===== 命令输出折叠 ===== */
+.ast-cmd { flex-wrap: wrap; }
+.ast-cmd-toggle {
+  flex: none; border: 1px solid var(--db-divider); background: transparent;
+  color: var(--db-muted); border-radius: 6px; font-size: 0.8em; padding: 0 6px; cursor: pointer;
+}
+.ast-cmd-toggle:hover { color: var(--db-fg); }
+.ast-cmd-out {
+  flex-basis: 100%; margin: 4px 0 6px 18px; padding: 6px 10px;
+  background: var(--db-code-bg); border-radius: 6px; font-size: 0.85em; line-height: 1.5;
+  white-space: pre-wrap; word-break: break-word; max-height: 240px; overflow: auto;
+}
+.ast-cmd-out.hidden { display: none; }
+
+/* ===== 等待动效：分隔线后的跳动省略号 ===== */
+.turn-dots {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 6px;
+  align-items: center;
+}
+.turn-dots .dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--db-muted);
+  opacity: 0.35;
+  animation: turn-dot-bounce 1.1s ease-in-out infinite;
+}
+.turn-dots .dot:nth-child(2) { animation-delay: 0.15s; }
+.turn-dots .dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes turn-dot-bounce {
+  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-2px); }
+}
+
+/* ===== 历史加载动效 ===== */
+.history-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--db-divider);
+  border-radius: 10px;
+  color: var(--db-muted);
+  font-size: 0.95em;
+}
+.history-spinner {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid var(--db-muted);
+  border-right-color: transparent;
+  animation: history-spin 0.75s linear infinite;
+}
+@keyframes history-spin { to { transform: rotate(360deg); } }
+.history-loading-text { opacity: 0.9; }
+
+
+/* 输入框上方的「正在执行中」状态条 */
+.running-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  padding: 6px 10px;
+  border: 1px dashed var(--db-divider, rgba(128, 128, 128, 0.3));
+  border-radius: 8px;
+  color: var(--db-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+.running-bar.hidden { display: none; }
+.running-bar .running-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.running-continue {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: var(--db-fg);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0 2px;
+}
+.running-continue:hover { text-decoration: underline; }
+
+
+/* 生图步骤：缩略图 */
+.ast-step-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 4px 20px;
+}
+.ast-step-images img {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--db-divider, rgba(128, 128, 128, 0.3));
+  cursor: pointer;
+  background: rgba(127, 127, 127, 0.08);
+}
+.ast-step-images img:hover { border-color: var(--db-fg); }
+
+
+/* 豆包询问卡片 */
+.ask-card {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--db-divider, rgba(128, 128, 128, 0.3));
+  border-radius: 10px;
+  background: rgba(127, 127, 127, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ask-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.ask-option {
+  text-align: left;
+  border: 1px solid var(--db-divider, rgba(128, 128, 128, 0.28));
+  background: transparent;
+  color: var(--db-fg);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.ask-option:hover { border-color: var(--db-fg); }
+.ask-option:disabled { opacity: 0.5; cursor: default; }
+.ask-card.answered .ask-option { opacity: 0.55; }
+.ask-custom { font-size: 11.5px; opacity: 0.65; margin-top: 2px; }
+
+
+/* 全部收起 / 全部展开 */
+.ast-fold-bar { display: flex; justify-content: flex-end; gap: 8px; margin: 4px 0 2px; }
+.ast-fold-all {
+  border: 1px solid var(--db-divider, rgba(128,128,128,0.28));
+  background: transparent;
+  color: var(--db-muted);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.ast-fold-all:hover { color: var(--db-fg); border-color: var(--db-fg); }
+
+.ast-msg-content.hidden { display: none; }
+
+.img-missing { display: inline-block; margin: 4px 0; padding: 3px 8px; border-radius: 6px; border: 1px dashed var(--db-divider, rgba(128,128,128,0.35)); color: var(--db-muted); font-size: 12px; }
+
+/* 任务标签栏 */
+.tab-bar {
+  display: flex;
+  gap: 2px;
+  align-items: stretch;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--db-divider, rgba(128,128,128,0.25));
+  background: var(--db-bg-soft, transparent);
+  scrollbar-width: thin;
+  flex: 0 0 auto;
+}
+.tab-bar.hidden { display: none; }
+.tab-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 180px;
+  padding: 5px 8px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--db-muted);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tab-item:hover { color: var(--db-fg); }
+.tab-item.active {
+  color: var(--db-fg);
+  border-bottom-color: var(--db-fg);
+}
+.tab-label { overflow: hidden; text-overflow: ellipsis; }
+.tab-close {
+  width: 16px; height: 16px; line-height: 14px; text-align: center;
+  border-radius: 4px; color: var(--db-muted);
+}
+.tab-close:hover { background: rgba(128,128,128,0.2); color: var(--db-fg); }
+
+.tab-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--db-fg, currentColor);
+  opacity: 0.9;
+  animation: tabDotPulse 1.2s ease-in-out infinite;
+}
+@keyframes tabDotPulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+
+/* 切换标签/同步内容时的加载条 */
+.sync-loading {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--db-muted);
+  border-bottom: 1px solid var(--db-divider, rgba(128,128,128,0.2));
+}
+.sync-loading.hidden { display: none; }
+.sync-spinner {
+  width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid rgba(128,128,128,0.35);
+  border-top-color: var(--db-fg, currentColor);
+  animation: syncSpin 0.8s linear infinite;
+}
+@keyframes syncSpin { to { transform: rotate(360deg); } }
+
+.quick-chat .chat-action.active {
+  color: var(--db-fg, currentColor);
+  border-color: var(--db-fg, currentColor);
+  background: rgba(128,128,128,0.16);
+}
+
+.file-link { color: var(--vscode-textLink-foreground, currentColor); text-decoration: underline; cursor: pointer; }
+.file-link:hover { text-decoration: none; }
+
+/* AI 改动审阅卡片 */
+.proposal-card {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--db-divider, rgba(128,128,128,0.35));
+  border-radius: 8px;
+  background: var(--db-bg-soft, transparent);
+}
+.proposal-title { font-weight: 600; font-size: 12.5px; }
+.proposal-meta { color: var(--db-muted); font-size: 11.5px; margin: 4px 0 8px; }
+.proposal-actions { display: flex; gap: 8px; }
+.proposal-actions .btn { font-size: 12px; padding: 3px 10px; }
+.proposal-card.decided .proposal-actions { color: var(--db-muted); }
+
+.verify-card { margin: 8px 0; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--db-divider, rgba(128,128,128,0.35)); }
+.verify-card.ok { border-color: rgba(76,175,80,0.5); }
+.verify-card.fail { border-color: rgba(244,67,54,0.5); }
+.verify-title { font-weight: 600; font-size: 12.5px; }
+.verify-output { max-height: 220px; overflow: auto; font-size: 11.5px; background: rgba(128,128,128,0.08); padding: 8px; border-radius: 6px; }
+.verify-actions { margin-top: 8px; }
+
+.verify-locations { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.verify-location { font-size: 11.5px; padding: 2px 8px; }
+
+.setup-hint { margin-top: 10px; padding: 10px 12px; border-radius: 8px; border: 1px dashed var(--db-divider, rgba(128,128,128,0.4)); color: var(--db-muted); font-size: 12px; }
+.setup-hint-title { color: var(--db-fg); font-weight: 600; margin-bottom: 6px; }
+.setup-hint-line { line-height: 1.8; }

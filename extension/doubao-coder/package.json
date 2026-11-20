@@ -1,0 +1,668 @@
+{
+  "name": "doubao-coder",
+  "displayName": "豆包编程助手",
+  "description": "第三方豆包编程助手：侧边栏 AI 对话、Agent 工具调用、行内补全、行内改写（Ctrl+Alt+I），并支持把选区投送到豆包桌面客户端。",
+  "icon": "media/doubao-icon.png",
+  "version": "0.45.8",
+  "publisher": "doubao-coder",
+  "author": "艾米尔",
+  "contributors": [
+    {
+      "name": "艾米尔"
+    }
+  ],
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "galleryBanner": {
+    "color": "#1E3A8A",
+    "theme": "dark"
+  },
+  "categories": [
+    "Programming Languages",
+    "Machine Learning",
+    "Other"
+  ],
+  "keywords": [
+    "doubao",
+    "ark",
+    "volcengine",
+    "ai",
+    "agent",
+    "completion"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "工作区不可信时禁用终端执行与自动改写，只保留只读对话与行内补全。",
+      "restrictedConfigurations": [
+        "doubao.apiKey",
+        "doubao.terminal.autoRun"
+      ]
+    },
+    "virtualWorkspaces": false
+  },
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onView:doubao.chatView",
+    "onCommand:doubao.newChat",
+    "onCommand:doubao.explainSelection",
+    "onCommand:doubao.editSelection",
+    "onCommand:doubao.applyLastDiff",
+    "onCommand:doubao.undoLastEdit",
+    "onCommand:doubao.sendSelectionToDoubaoApp",
+    "onCommand:doubao.openSettings",
+    "onCommand:doubao.setApiKey",
+    "onCommand:doubao.clearApiKey",
+    "onCommand:doubao.connectDesktop",
+    "onCommand:doubao.launchDesktop",
+    "onCommand:doubao.runTask",
+    "onCommand:doubao.checkInstall",
+    "onCommand:doubao.setInstallPath",
+    "onCommand:doubao.showLogs",
+    "onCommand:doubao.indexWorkspace",
+    "onCommand:doubao.runChecks",
+    "onCommand:doubao.mcpStatus",
+    "onCommand:doubao.applyNoWatermark"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "doubao-coder",
+          "title": "豆包编程助手",
+          "icon": "media/doubao-mono.svg"
+        }
+      ]
+    },
+    "views": {
+      "doubao-coder": [
+        {
+          "type": "webview",
+          "id": "doubao.chatView",
+          "name": "豆包对话",
+          "contextualTitle": "豆包编程助手",
+          "icon": "media/doubao-mono.svg"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "doubao.openMirror",
+        "title": "豆包: 打开镜像窗口（M1）",
+        "category": "豆包"
+      },
+      {
+        "command": "doubao.newChat",
+        "title": "新建对话",
+        "category": "豆包",
+        "icon": "$(add)"
+      },
+      {
+        "command": "doubao.explainSelection",
+        "title": "解释选中代码",
+        "category": "豆包",
+        "icon": "$(book)"
+      },
+      {
+        "command": "doubao.editSelection",
+        "title": "行内改写选中代码",
+        "category": "豆包",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "doubao.applyLastDiff",
+        "title": "查看/撤销上一次改动",
+        "category": "豆包",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "doubao.undoLastEdit",
+        "title": "撤销上一次改动",
+        "category": "豆包",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "doubao.sendSelectionToDoubaoApp",
+        "title": "把选区投送到豆包桌面客户端",
+        "category": "豆包",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "doubao.openSettings",
+        "title": "打开设置",
+        "category": "豆包",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "doubao.setApiKey",
+        "title": "设置 API Key",
+        "category": "豆包",
+        "icon": "$(key)"
+      },
+      {
+        "command": "doubao.clearApiKey",
+        "title": "清除 API Key",
+        "category": "豆包",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "doubao.connectDesktop",
+        "title": "连接豆包桌面端（免 Key）",
+        "category": "豆包",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "doubao.runTask",
+        "title": "任务模式：让豆包在本机执行任务",
+        "category": "豆包",
+        "icon": "$(play-circle)"
+      },
+      {
+        "command": "doubao.checkInstall",
+        "title": "检测豆包安装与本地资源",
+        "category": "豆包",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "doubao.setInstallPath",
+        "title": "设置豆包安装路径",
+        "category": "豆包",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "doubao.launchDesktop",
+        "title": "以调试端口启动桌面端",
+        "category": "豆包",
+        "icon": "$(debug-start)"
+      },
+      {
+        "command": "doubao.showLogs",
+        "title": "显示日志",
+        "category": "豆包",
+        "icon": "$(output)"
+      },
+      {
+        "command": "doubao.indexWorkspace",
+        "title": "统计工作区文件数",
+        "category": "豆包",
+        "icon": "$(files)"
+      },
+      {
+        "command": "doubao.runChecks",
+        "title": "运行工程检查（编译 / lint / 测试）",
+        "category": "豆包",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "doubao.mcpStatus",
+        "title": "查看 MCP 连接状态",
+        "category": "豆包",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "doubao.applyNoWatermark",
+        "title": "设置生图无水印（文档 / 图片）",
+        "category": "豆包",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "doubao.captureProtocol",
+        "title": "豆包: 抓取协议帧（诊断用）",
+        "category": "豆包"
+      },
+      {
+        "command": "doubao.refactorSelection",
+        "title": "豆包：重构选中代码"
+      },
+      {
+        "command": "doubao.writeTests",
+        "title": "豆包：为选中代码写测试"
+      },
+      {
+        "command": "doubao.fixDiagnostics",
+        "title": "豆包：修复当前文件诊断错误"
+      },
+      {
+        "command": "doubao.attachGitDiff",
+        "title": "豆包：审阅当前 Git 改动"
+      },
+      {
+        "command": "doubao.undoAcceptedEdit",
+        "title": "豆包：撤销上一次已接受的改动"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "doubao.newChat",
+          "when": "view == doubao.chatView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "doubao.runTask",
+          "when": "view == doubao.chatView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "doubao.showLogs",
+          "when": "view == doubao.chatView",
+          "group": "navigation@3"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "doubao.explainSelection",
+          "when": "editorHasSelection",
+          "group": "doubao@1"
+        },
+        {
+          "command": "doubao.editSelection",
+          "when": "editorHasSelection",
+          "group": "doubao@2"
+        },
+        {
+          "command": "doubao.sendSelectionToDoubaoApp",
+          "when": "editorHasSelection",
+          "group": "doubao@3"
+        },
+        {
+          "command": "doubao.refactorSelection",
+          "when": "editorHasSelection",
+          "group": "doubao@4"
+        },
+        {
+          "command": "doubao.writeTests",
+          "when": "editorHasSelection",
+          "group": "doubao@5"
+        },
+        {
+          "command": "doubao.fixDiagnostics",
+          "when": "editorLangId != \"\"",
+          "group": "doubao@6"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "doubao.newChat",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "doubao.explainSelection"
+        },
+        {
+          "command": "doubao.refactorSelection"
+        },
+        {
+          "command": "doubao.writeTests"
+        },
+        {
+          "command": "doubao.fixDiagnostics"
+        },
+        {
+          "command": "doubao.attachGitDiff"
+        },
+        {
+          "command": "doubao.undoAcceptedEdit"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "doubao.editSelection",
+        "key": "ctrl+alt+i",
+        "mac": "cmd+alt+i",
+        "when": "editorTextFocus && editorHasSelection"
+      }
+    ],
+    "configuration": {
+      "title": "豆包编程助手",
+      "properties": {
+        "doubao.authMode": {
+          "type": "string",
+          "enum": [
+            "desktop",
+            "ark"
+          ],
+          "enumDescriptions": [
+            "直连已登录的豆包桌面端（免 API Key，需以调试端口启动豆包）",
+            "走火山方舟 OpenAI 兼容接口（需 API Key）"
+          ],
+          "default": "desktop",
+          "markdownDescription": "接入方式。`desktop`：复用桌面端登录态，不需要 API Key；`ark`：官方 API Key。"
+        },
+        "doubao.desktop.port": {
+          "type": "number",
+          "default": 9222,
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "豆包桌面端的 Chrome DevTools 调试端口（启动参数 --remote-debugging-port）。"
+        },
+        "doubao.desktop.exePath": {
+          "type": "string",
+          "default": "",
+          "description": "豆包可执行文件路径，留空自动使用 %LOCALAPPDATA%\\Doubao\\Application\\app\\Doubao.exe。"
+        },
+        "doubao.desktop.workMode": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "local",
+            "chat"
+          ],
+          "enumDescriptions": [
+            "跟着扩展模式走：本地电脑任务切到「工作任务·本地电脑」，普通对话切到「对话」",
+            "始终使用桌面端的「工作任务 · 本地电脑」",
+            "始终使用桌面端的「对话」"
+          ],
+          "default": "local",
+          "description": "发送前把豆包桌面端切到哪个工作模式。"
+        },
+        "doubao.desktop.model": {
+          "type": "string",
+          "default": "DeepSeek V4.1 Flash",
+          "markdownDescription": "本地电脑模式下希望使用的桌面端模型。默认 `DeepSeek V4.1 Flash`；留空表示不改，跟随豆包桌面端当前选择。"
+        },
+        "doubao.desktop.reasoning": {
+          "type": "string",
+          "enum": [
+            "",
+            "低",
+            "中",
+            "高",
+            "极高"
+          ],
+          "default": "高",
+          "description": "本地电脑模式下希望使用的推理强度；留空表示不改。"
+        },
+        "doubao.applyNoWatermark": {
+          "type": "boolean",
+          "default": true,
+          "description": "初始化时自动进入豆包设置，把「AI 生成水印」设为无水印（文档/表格/PPT、图片/视频）。"
+        },
+        "doubao.autoContinue": {
+          "type": "boolean",
+          "default": true,
+          "description": "回合结束后自动选择「继续说」：倒计时结束自动发送，继续查看豆包执行状态。"
+        },
+        "doubao.autoContinueSeconds": {
+          "type": "number",
+          "default": 5,
+          "minimum": 0,
+          "maximum": 120,
+          "description": "自动「继续说」的倒计时秒数；0 表示关闭。"
+        },
+        "doubao.desktop.newChat": {
+          "type": "boolean",
+          "default": false,
+          "description": "每次提问前是否在豆包里新开一个对话（false 表示接着当前会话聊）。"
+        },
+        "doubao.desktop.timeoutMs": {
+          "type": "number",
+          "default": 180000,
+          "minimum": 10000,
+          "description": "等待桌面端回复的最长时间（毫秒）。"
+        },
+        "doubao.ptc.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "桌面端通道下启用 **PTC（Programmatic Tool Calling）**：模型输出 ` ```tool ` 代码块来调用工作区工具，扩展执行后把结果发回同一会话。关闭则退化为纯对话。"
+        },
+        "doubao.ptc.maxRounds": {
+          "type": "number",
+          "default": 8,
+          "minimum": 1,
+          "maximum": 24,
+          "description": "PTC 最多几轮工具循环（每轮会在豆包会话里多一条消息，别设太大）。"
+        },
+        "doubao.chat.mode": {
+          "type": "string",
+          "enum": [
+            "chat",
+            "local"
+          ],
+          "enumDescriptions": [
+            "普通对话：问答 / 解释 / 代码建议",
+            "本地电脑：让豆包先出计划，再一步步在本机执行（读文件、改代码、跑命令）"
+          ],
+          "default": "local",
+          "description": "侧边栏对话的默认模式，对应界面上的「对话 / 本地电脑」开关。"
+        },
+        "doubao.task.permission": {
+          "type": "string",
+          "enum": [
+            "ask",
+            "risk",
+            "allow"
+          ],
+          "enumDescriptions": [
+            "始终询问：任何有副作用的操作都弹确认",
+            "按需确认：只对高风险操作（删除、推送、提权、下载执行等）弹确认",
+            "全部允许：不弹确认（仍然写日志），慎用"
+          ],
+          "default": "allow",
+          "markdownDescription": "任务模式（本地电脑执行面）的确认策略，对应豆包桌面端「始终询问 / 按需确认 / 全部允许」。默认 `allow`：不弹确认，谨慎在不受信任的工作区使用。"
+        },
+        "doubao.mirror.quality": {
+          "type": "number",
+          "default": 70,
+          "minimum": 30,
+          "maximum": 95,
+          "description": "镜像画面 JPEG 质量（越小越省 CPU/带宽，文字越糊）"
+        },
+        "doubao.mirror.fps": {
+          "type": "number",
+          "default": 8,
+          "minimum": 2,
+          "maximum": 30,
+          "description": "镜像画面目标帧率（每 N 帧取 1 帧换算而来的建议值，实际取决于窗口变化）"
+        },
+        "doubao.mirror.maxWidth": {
+          "type": "number",
+          "default": 1000,
+          "minimum": 640,
+          "maximum": 1600,
+          "description": "镜像画面最长边像素（越小越省带宽）"
+        },
+        "doubao.task.native": {
+          "type": "boolean",
+          "default": true,
+          "description": "本地模式直接把目标交给豆包自己的本地电脑 agent 执行（过程与豆包界面一致）。关掉则用扩展内置的逐步执行循环。"
+        },
+        "doubao.task.maxSteps": {
+          "type": "number",
+          "default": 30,
+          "minimum": 1,
+          "maximum": 80,
+          "description": "任务模式最多执行多少步（每步一次模型决策 + 一次工具执行）。"
+        },
+        "doubao.installPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "豆包安装路径（`Doubao.exe` 的完整路径）。留空自动检测 `%LOCALAPPDATA%\\Doubao\\Application\\app\\Doubao.exe`。本地电脑能力与终端/MCP 设计**复用该安装目录里的资源**。"
+        },
+        "doubao.pythonPath": {
+          "type": "string",
+          "default": "python",
+          "description": "调用豆包安装目录里 Python SDK 时使用的解释器（python / py / 绝对路径）。"
+        },
+        "doubao.computer.backend": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "doubao",
+            "win32"
+          ],
+          "enumDescriptions": [
+            "优先用豆包安装目录的 Computer Use SDK，GAC 通道不可用时退化到本地 Win32",
+            "强制用豆包 SDK（接不上就报错）",
+            "强制用本地 Win32（SendInput + System.Drawing）"
+          ],
+          "default": "auto",
+          "description": "本地电脑动作的执行后端。"
+        },
+        "doubao.baseUrl": {
+          "type": "string",
+          "default": "https://ark.cn-beijing.volces.com/api/v3",
+          "markdownDescription": "Ark API 基础地址。按量计费用 `https://ark.cn-beijing.volces.com/api/v3`，Coding Plan 用 `https://ark.cn-beijing.volces.com/api/coding/v3`。也可用环境变量 `ARK_BASE_URL` 覆盖。"
+        },
+        "doubao.apiKey": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Ark API Key。留空时依次回退到环境变量 `ARK_API_KEY`、`DOUBAO_API_KEY`。"
+        },
+        "doubao.model": {
+          "type": "string",
+          "default": "doubao-seed-code",
+          "description": "对话 / Agent 使用的模型 ID（Ark 控制台里的模型名或推理接入点 ID）。"
+        },
+        "doubao.completionModel": {
+          "type": "string",
+          "default": "doubao-seed-code",
+          "description": "行内补全使用的模型 ID，留空则复用 doubao.model。"
+        },
+        "doubao.temperature": {
+          "type": "number",
+          "default": 0.2,
+          "minimum": 0,
+          "maximum": 2,
+          "description": "采样温度。"
+        },
+        "doubao.maxTokens": {
+          "type": "number",
+          "default": 4096,
+          "minimum": 1,
+          "description": "单次回复的最大 token 数。"
+        },
+        "doubao.maxToolIterations": {
+          "type": "number",
+          "default": 16,
+          "minimum": 1,
+          "maximum": 80,
+          "description": "Agent 单轮对话中最多执行多少次工具调用循环。"
+        },
+        "doubao.enableInlineCompletion": {
+          "type": "boolean",
+          "default": true,
+          "description": "是否启用行内补全。"
+        },
+        "doubao.systemPromptFile": {
+          "type": "string",
+          "default": "",
+          "description": "自定义系统提示词文件路径（绝对路径或相对工作区根目录）。留空使用内置提示词。"
+        },
+        "doubao.rulesFile": {
+          "type": "string",
+          "default": ".doubao/rules.md",
+          "description": "项目规则文件路径，内容会追加到系统提示词中。"
+        },
+        "doubao.terminal.autoRun": {
+          "type": "boolean",
+          "default": true,
+          "description": "允许 Agent 自动执行终端命令。默认开启：不再逐条弹确认；关闭后每条命令都需要模态确认。"
+        },
+        "doubao.mcp.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "为 true 时在日志里打印内置 MCP stdio server 的挂载路径（实验性；内置 server 需要外部 MCP 客户端挂载）。"
+        },
+        "doubao.mcp.servers": {
+          "type": "array",
+          "default": [],
+          "markdownDescription": "外部 MCP server 列表。扩展会以 stdio 启动它们，把工具以 `mcp__<server>__<tool>` 暴露给 Agent（Ark / PTC / 任务模式都可用）。修改后自动重连。",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "command"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "唯一名称，用于工具名前缀。"
+              },
+              "command": {
+                "type": "string",
+                "description": "可执行文件，例如 node / npx / python。"
+              },
+              "args": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "命令行参数。"
+              },
+              "env": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "额外环境变量（会与当前进程环境合并）。"
+              },
+              "cwd": {
+                "type": "string",
+                "description": "工作目录，可选。"
+              },
+              "enabled": {
+                "type": "boolean",
+                "default": true,
+                "description": "为 false 时跳过该 server。"
+              },
+              "timeoutMs": {
+                "type": "number",
+                "minimum": 1000,
+                "description": "单次 tools/call 超时（毫秒），默认 60000。"
+              }
+            }
+          }
+        },
+        "doubao.restoreLastWindow": {
+          "type": "boolean",
+          "default": false,
+          "description": "面板打开时自动切回上次打开的豆包对话（默认关闭，避免抢占当前任务）。"
+        },
+        "doubao.reviewEdits": {
+          "type": "boolean",
+          "default": true,
+          "description": "AI 修改文件前先提交审阅，必须在面板里「接受」后才落盘（默认开启）。"
+        },
+        "doubao.verify.buildCommand": {
+          "type": "string",
+          "default": "",
+          "description": "「构建」验证执行的命令；留空则自动检测（npm run build / cargo / cmake）。"
+        },
+        "doubao.verify.testCommand": {
+          "type": "string",
+          "default": "",
+          "description": "「测试」验证执行的命令；留空则自动检测（npm run test / cargo test）。"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p .",
+    "watch": "tsc -watch -p .",
+    "mcp": "node ./out/mcp/server.js",
+    "test": "node test/policy.test.js && node test/task.test.js && node test/ptc-parser.test.js && node test/md-extractor.test.js && node test/cu-core.test.js && node test/read-last.test.js && node test/mcp-client.test.js && node test/checks.test.js && node test/mcp-integration.test.js && node test/checks-tool.test.js && node test/tool-args.test.js && node test/path-boundary.test.js && node test/write-race.test.js && node test/terminal-timeout.test.js && node test/guard.test.js && node test/policy-bypass.test.js && node test/ws-overflow.test.js && node test/mcp-server-flush.test.js && node test/webview-mode.test.js && node test/ui-states.test.js && node test/blocks.test.js && node test/pick-page.test.js && node test/model-label.test.js && node test/activity.test.js && node test/step-style.test.js && node test/expand.test.js && node test/history-loading.test.js && node test/watermark.test.js && node test/history-running.test.js && node test/running-bar.test.js && node test/mode-switch.test.js && node test/local-images.test.js && node test/task-isolation.test.js && node test/active-target.test.js && node test/tabs.test.js && node test/parity.test.js",
+    "package": "npx --yes @vscode/vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/vscode": "1.90.0",
+    "typescript": "^5.5.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xk5320/doubao-coder"
+  },
+  "files": [],
+  "homepage": "https://github.com/xk5320/doubao-coder#readme",
+  "bugs": {
+    "url": "https://github.com/xk5320/doubao-coder/issues"
+  }
+}

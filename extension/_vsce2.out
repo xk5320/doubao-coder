@@ -1,0 +1,40 @@
+Executing prepublish script 'npm run vscode:prepublish'...
+
+> doubao-coder@0.8.0 vscode:prepublish
+> npm run compile
+
+
+> doubao-coder@0.8.0 compile
+> tsc -p .
+
+ INFO  Files included in the VSIX:
+_pkg_test.vsix
+├─ [Content_Types].xml 
+├─ extension.vsixmanifest 
+└─ extension/
+   ├─ LICENSE.txt [1.06 KB]
+   ├─ changelog.md [1.47 KB]
+   ├─ package.json [17.5 KB]
+   ├─ readme.md [19.63 KB]
+   ├─ media/
+   │  ├─ chat.css [13 KB]
+   │  ├─ chat.js [27.05 KB]
+   │  ├─ doubao.svg [0.61 KB]
+   │  └─ icon.png [7.62 KB]
+   └─ out/
+      ├─ config.js [14.48 KB]
+      ├─ extension.js [21.91 KB]
+      ├─ log.js [3.38 KB]
+      ├─ agent/ (7 files) [88.21 KB]
+      ├─ ark/ (1 file) [18.01 KB]
+      ├─ bridge/ (6 files) [56.34 KB]
+      ├─ chat/ (2 files) [64.79 KB]
+      ├─ completion/ (1 file) [8.23 KB]
+      ├─ cu/ (9 files) [62.91 KB]
+      ├─ doubao/ (2 files) [18.21 KB]
+      ├─ inline/ (1 file) [13.78 KB]
+      └─ mcp/ (3 files) [59.78 KB]
+
+=> Run vsce ls --tree to see all included files.
+
+ DONE  Packaged: D:\rex86\doubao-re\extension\_pkg_test.vsix (45 files, 177.04 KB)

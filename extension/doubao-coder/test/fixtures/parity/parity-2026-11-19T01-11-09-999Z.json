@@ -1,0 +1,585 @@
+{
+ "at": "2026-11-19T01:11:09.999Z",
+ "ref": {
+  "count": 3,
+  "blocks": [
+   {
+    "kind": "status",
+    "text": "已处理 2 分 48 秒"
+   },
+   {
+    "top": 124.0666732788086,
+    "left": 318.0000305175781,
+    "seq": 0,
+    "kind": "text",
+    "text": "我先摸清这四项在移植版里的现状（主角 / 怪物行为、打怪、寻路、对话、迷雾），再挑缺口动手。",
+    "streaming": false
+   },
+   {
+    "top": 197.06668090820312,
+    "left": 318.0000305175781,
+    "seq": 1,
+    "kind": "step",
+    "text": "已查找文件内容 \"Fog | 迷雾 | Mist\" in C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map",
+    "state": "done"
+   },
+   {
+    "top": 226.06668090820312,
+    "left": 318.0000305175781,
+    "seq": 2,
+    "kind": "step",
+    "text": "已执行代码 $ref='E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app'; Get-ChildItem -LiteralPath $ref -Recurse -Filter '*.ts' | Select-String -Pattern 'fog|Fog | 迷雾 ' -List | Select-Object -First 15 Path | Format-Table -AutoSize",
+    "state": "done"
+   },
+   {
+    "top": 255.06668090820312,
+    "left": 318.0000305175781,
+    "seq": 3,
+    "kind": "step",
+    "text": "已执行代码 $u='C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module'; foreach ($m in 'monsterAction','hero','map\\View'){ $p=Join-Path $u $m; if (Test-Path $p){ \"== $m ==\"; Get-ChildItem -LiteralPath $p -Filter '*.cs' -Recurse | Select-Object Name,Length | Format-Table -AutoSize } }",
+    "state": "done"
+   },
+   {
+    "top": 284.0666809082031,
+    "left": 318.0000305175781,
+    "seq": 4,
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map\\MapRevealDriver.cs",
+    "state": "done"
+   },
+   {
+    "top": 313.0666809082031,
+    "left": 318.0000305175781,
+    "seq": 5,
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map\\View\\MapMonsterView.cs",
+    "state": "done"
+   },
+   {
+    "top": 342.0666809082031,
+    "left": 318.0000305175781,
+    "seq": 6,
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\monsterAction\\MonsterActionManager.cs",
+    "state": "done"
+   },
+   {
+    "top": 371.0666809082031,
+    "left": 318.0000305175781,
+    "seq": 7,
+    "kind": "step",
+    "text": "已查找文件内容 \"MonsterActionHelper|MonsterActionManager|RevealLayer|IsRevealMap|CheckReveal\" in C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map",
+    "state": "done"
+   },
+   {
+    "top": 400.0666809082031,
+    "left": 318.0000305175781,
+    "seq": 8,
+    "kind": "step",
+    "text": "已执行代码 $p='E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app\\module\\monsterAction'; if (Test-Path $p){ Get-ChildItem -LiteralPath $p -Filter '*.ts' | Select-Object Name,Length | Format-Table -AutoSize } else { 'no monsterAction module' }",
+    "state": "done"
+   },
+   {
+    "top": 429.0666809082031,
+    "left": 318.0000305175781,
+    "seq": 9,
+    "kind": "step",
+    "text": "已读取 E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app\\module\\monsterAction\\MonsterActionHelper.ts",
+    "state": "done"
+   },
+   {
+    "top": 458.0666809082031,
+    "left": 318.0000305175781,
+    "seq": 10,
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\monsterAction\\MonsterActionHelper.cs",
+    "state": "done"
+   },
+   {
+    "top": 487.0666809082031,
+    "left": 318.0000305175781,
+    "seq": 11,
+    "kind": "step",
+    "text": "已执行代码 $ref='E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app'; Get-ChildItem -LiteralPath $ref -Recurse -Filter '*.ts' | Select-String -Pattern 'MonsterActionHelper' | Select-Object Path,LineNumber,Line | Format-Table -AutoSize -Wrap",
+    "state": "done"
+   },
+   {
+    "top": 516.0667114257812,
+    "left": 318.0000305175781,
+    "seq": 12,
+    "kind": "step",
+    "text": "已查找文件内容 \"IMonsterActionHandler|MonsterActionHelper\\\\.|MonsterActionTrackBuilder\\\\.\" in C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts",
+    "state": "done"
+   },
+   {
+    "top": 545.0667114257812,
+    "left": 318.0000305175781,
+    "seq": 13,
+    "kind": "step",
+    "text": "已执行代码 $f='E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app\\base\\mapObj\\MonsterObj.ts'; (Get-Content -LiteralPath $f).Count; Select-String -LiteralPath $f -Pattern 'class |actionHandler|action1|action2|GetUniqueID|isValid|resetAnim|applyAnim|destroy\\(' | Select-Object LineNumber,Line | Format-Table -AutoSize -Wrap | Select-Object -First 60",
+    "state": "done"
+   },
+   {
+    "top": 574.0667114257812,
+    "left": 318.0000305175781,
+    "seq": 14,
+    "kind": "step",
+    "text": "已执行代码 $f='E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app\\base\\mapObj\\MonsterObj.ts'; Get-Content -LiteralPath $f | Select-Object -Skip 895 -First 60",
+    "state": "done"
+   },
+   {
+    "top": 603.0667114257812,
+    "left": 318.0000305175781,
+    "seq": 15,
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\monsterAction\\MonsterActionTracks.cs",
+    "state": "done"
+   },
+   {
+    "top": 632.0667114257812,
+    "left": 318.0000305175781,
+    "seq": 16,
+    "kind": "step",
+    "text": "已查找文件内容 \"IMonsterActionEntity|HasPatrolPath|MonsterActionTable|MonsterActionRow\" in C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts",
+    "state": "done"
+   },
+   {
+    "top": 661.0667114257812,
+    "left": 318.0000305175781,
+    "seq": 17,
+    "kind": "step",
+    "text": "已执行代码 Get-ChildItem 'C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Config\\Generated' -Filter '*Action*' | Select-Object Name,Length | Format-Table -AutoSize; Select-String -Path 'C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Config\\Generated\\MonsterRow.cs' -Pattern 'effect' -Context 0,1 | Select-Object -First 3 | Format-Table -AutoSize -Wrap",
+    "state": "done"
+   },
+   {
+    "top": 690.0667114257812,
+    "left": 318.0000305175781,
+    "seq": 18,
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\monsterAction\\MonsterActionTypes.cs",
+    "state": "done"
+   },
+   {
+    "top": 719.0667114257812,
+    "left": 318.0000305175781,
+    "seq": 19,
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map\\View\\MapActorObj.cs",
+    "state": "done"
+   },
+   {
+    "top": 748.0667114257812,
+    "left": 318.0000305175781,
+    "seq": 20,
+    "kind": "step",
+    "text": "已读取 E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app\\module\\monsterAction\\handlers\\CommonMonsterActionHandler.ts",
+    "state": "done"
+   },
+   {
+    "top": 777.0667114257812,
+    "left": 318.0000305175781,
+    "seq": 21,
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\monsterAction\\MonsterActionTracks.cs",
+    "state": "done"
+   },
+   {
+    "top": 806.0667114257812,
+    "left": 318.0000305175781,
+    "seq": 22,
+    "kind": "step",
+    "text": "已查找文件内容 \"PathMove|StartFight|FightStart|SpawnFight|TickFocus|Fog|RevealMask|MaskSprite\" in C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map",
+    "state": "done"
+   },
+   {
+    "top": 835.0667114257812,
+    "left": 318.0000305175781,
+    "seq": 23,
+    "kind": "step",
+    "text": "已执行代码 $p='E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app\\module\\map'; Get-ChildItem -LiteralPath $p -Recurse -Filter '*.ts' | Where-Object {$_.Name -match 'Reveal|Path|Move'} | Select-Object Name,Length | Format-Table -AutoSize",
+    "state": "done"
+   },
+   {
+    "top": 864.0667114257812,
+    "left": 318.0000305175781,
+    "seq": 24,
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map\\View\\MapSceneView.cs",
+    "state": "done"
+   },
+   {
+    "top": 893.0667114257812,
+    "left": 318.0000305175781,
+    "seq": 25,
+    "kind": "step",
+    "text": "已查找文件内容 \"Reveal|Fog|TileLayer|Tile\" in C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map\\View\\MapStaticObjectView.cs",
+    "state": "done"
+   },
+   {
+    "top": 922.0667114257812,
+    "left": 318.0000305175781,
+    "seq": 26,
+    "kind": "step",
+    "text": "已读取 E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app\\module\\map\\tilemap\\RevealLayer.ts",
+    "state": "done"
+   },
+   {
+    "top": 951.0667114257812,
+    "left": 318.0000305175781,
+    "seq": 27,
+    "kind": "step",
+    "text": "已查找文件内容 \"MapRevealDriver|SetRevealId|UnlockReveal\" in C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts",
+    "state": "done"
+   },
+   {
+    "top": 980.0667114257812,
+    "left": 318.0000305175781,
+    "seq": 28,
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map\\MapRevealDriver.cs",
+    "state": "done"
+   },
+   {
+    "top": 1009.0667114257812,
+    "left": 318.0000305175781,
+    "seq": 29,
+    "kind": "step",
+    "text": "已执行代码 $ref='E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app'; Get-ChildItem -LiteralPath $ref -Recurse -Filter '*.ts' | Select-String -Pattern 'NotifySpawnLayer|SetRevealId|GetRevealIds|checkReveal|OnHeroGrid' | Select-Object Path,LineNumber,Line | Format-Table -AutoSize -Wrap",
+    "state": "done"
+   },
+   {
+    "top": 1038.0667724609375,
+    "left": 318.0000305175781,
+    "seq": 30,
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map\\MapModel.cs",
+    "state": "done"
+   },
+   {
+    "top": 1067.0667724609375,
+    "left": 318.0000305175781,
+    "seq": 31,
+    "kind": "step",
+    "text": "已查找文件内容 \"NotifyHeroGridChanged\" in C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts",
+    "state": "done"
+   },
+   {
+    "top": 1096.0667724609375,
+    "left": 318.0000305175781,
+    "seq": 32,
+    "kind": "step",
+    "text": "已执行代码 $f='E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app\\module\\linkageTarkov\\LinkageTarkovModel.ts'; Get-Content -LiteralPath $f | Select-Object -Skip 820 -First 80",
+    "state": "done"
+   },
+   {
+    "top": 1125.0667724609375,
+    "left": 318.0000305175781,
+    "seq": 33,
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map\\MapModel.cs",
+    "state": "done"
+   },
+   {
+    "top": 1154.0667724609375,
+    "left": 318.0000305175781,
+    "seq": 34,
+    "kind": "step",
+    "text": "已查找文件内容 \"Fight|Battle|Attack\" in C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map",
+    "state": "done"
+   },
+   {
+    "top": 1183.0667724609375,
+    "left": 318.0000305175781,
+    "seq": 35,
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\monsterAction\\MonsterActionTracks.cs",
+    "state": "done"
+   },
+   {
+    "top": 1212.0667724609375,
+    "left": 318.0000305175781,
+    "seq": 36,
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\monsterAction\\MonsterActionModule.cs",
+    "state": "done"
+   },
+   {
+    "top": 1241.0667724609375,
+    "left": 318.0000305175781,
+    "seq": 37,
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\monsterAction\\MonsterActionTracks.cs",
+    "state": "done"
+   },
+   {
+    "top": 1270.0667724609375,
+    "left": 318.0000305175781,
+    "seq": 38,
+    "kind": "step",
+    "text": "已查找文件内容 \"effect\\\\[|effect\\\\?\\\\[|\\\\\\\"path\\\\\\\"|effect as JObject|effect is JObject\" in C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map",
+    "state": "done"
+   }
+  ],
+  "progress": "已处理 2 分 48 秒",
+  "progressSeconds": 168,
+  "done": false,
+  "streaming": false,
+  "executing": false,
+  "busy": false
+ },
+ "prod": {
+  "count": 3,
+  "text": "我先摸清这四项在移植版里的现状（主角 / 怪物行为、打怪、寻路、对话、迷雾），再挑缺口动手。",
+  "streaming": false,
+  "images": [],
+  "generating": "",
+  "confirming": false,
+  "busy": false,
+  "progress": "已处理 2 分 48 秒",
+  "progressSeconds": 168,
+  "executing": false,
+  "done": false,
+  "blocks": [
+   {
+    "kind": "status",
+    "text": "已处理 2 分 48 秒"
+   },
+   {
+    "kind": "text",
+    "text": "我先摸清这四项在移植版里的现状（主角 / 怪物行为、打怪、寻路、对话、迷雾），再挑缺口动手。"
+   },
+   {
+    "kind": "step",
+    "text": "已查找文件内容 \"Fog | 迷雾 | Mist\" in C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已执行代码 $ref='E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app'; Get-ChildItem -LiteralPath $ref -Recurse -Filter '*.ts' | Select-String -Pattern 'fog|Fog | 迷雾 ' -List | Select-Object -First 15 Path | Format-Table -AutoSize",
+    "state": "done",
+    "icon": "code"
+   },
+   {
+    "kind": "step",
+    "text": "已执行代码 $u='C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module'; foreach ($m in 'monsterAction','hero','map\\View'){ $p=Join-Path $u $m; if (Test-Path $p){ \"== $m ==\"; Get-ChildItem -LiteralPath $p -Filter '*.cs' -Recurse | Select-Object Name,Length | Format-Table -AutoSize } }",
+    "state": "done",
+    "icon": "code"
+   },
+   {
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map\\MapRevealDriver.cs",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map\\View\\MapMonsterView.cs",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\monsterAction\\MonsterActionManager.cs",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已查找文件内容 \"MonsterActionHelper|MonsterActionManager|RevealLayer|IsRevealMap|CheckReveal\" in C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已执行代码 $p='E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app\\module\\monsterAction'; if (Test-Path $p){ Get-ChildItem -LiteralPath $p -Filter '*.ts' | Select-Object Name,Length | Format-Table -AutoSize } else { 'no monsterAction module' }",
+    "state": "done",
+    "icon": "code"
+   },
+   {
+    "kind": "step",
+    "text": "已读取 E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app\\module\\monsterAction\\MonsterActionHelper.ts",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\monsterAction\\MonsterActionHelper.cs",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已执行代码 $ref='E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app'; Get-ChildItem -LiteralPath $ref -Recurse -Filter '*.ts' | Select-String -Pattern 'MonsterActionHelper' | Select-Object Path,LineNumber,Line | Format-Table -AutoSize -Wrap",
+    "state": "done",
+    "icon": "code"
+   },
+   {
+    "kind": "step",
+    "text": "已查找文件内容 \"IMonsterActionHandler|MonsterActionHelper\\\\.|MonsterActionTrackBuilder\\\\.\" in C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已执行代码 $f='E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app\\base\\mapObj\\MonsterObj.ts'; (Get-Content -LiteralPath $f).Count; Select-String -LiteralPath $f -Pattern 'class |actionHandler|action1|action2|GetUniqueID|isValid|resetAnim|applyAnim|destroy\\(' | Select-Object LineNumber,Line | Format-Table -AutoSize -Wrap | Select-Object -First 60",
+    "state": "done",
+    "icon": "code"
+   },
+   {
+    "kind": "step",
+    "text": "已执行代码 $f='E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app\\base\\mapObj\\MonsterObj.ts'; Get-Content -LiteralPath $f | Select-Object -Skip 895 -First 60",
+    "state": "done",
+    "icon": "code"
+   },
+   {
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\monsterAction\\MonsterActionTracks.cs",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已查找文件内容 \"IMonsterActionEntity|HasPatrolPath|MonsterActionTable|MonsterActionRow\" in C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已执行代码 Get-ChildItem 'C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Config\\Generated' -Filter '*Action*' | Select-Object Name,Length | Format-Table -AutoSize; Select-String -Path 'C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Config\\Generated\\MonsterRow.cs' -Pattern 'effect' -Context 0,1 | Select-Object -First 3 | Format-Table -AutoSize -Wrap",
+    "state": "done",
+    "icon": "code"
+   },
+   {
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\monsterAction\\MonsterActionTypes.cs",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map\\View\\MapActorObj.cs",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已读取 E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app\\module\\monsterAction\\handlers\\CommonMonsterActionHandler.ts",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\monsterAction\\MonsterActionTracks.cs",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已查找文件内容 \"PathMove|StartFight|FightStart|SpawnFight|TickFocus|Fog|RevealMask|MaskSprite\" in C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已执行代码 $p='E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app\\module\\map'; Get-ChildItem -LiteralPath $p -Recurse -Filter '*.ts' | Where-Object {$_.Name -match 'Reveal|Path|Move'} | Select-Object Name,Length | Format-Table -AutoSize",
+    "state": "done",
+    "icon": "code"
+   },
+   {
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map\\View\\MapSceneView.cs",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已查找文件内容 \"Reveal|Fog|TileLayer|Tile\" in C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map\\View\\MapStaticObjectView.cs",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已读取 E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app\\module\\map\\tilemap\\RevealLayer.ts",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已查找文件内容 \"MapRevealDriver|SetRevealId|UnlockReveal\" in C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map\\MapRevealDriver.cs",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已执行代码 $ref='E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app'; Get-ChildItem -LiteralPath $ref -Recurse -Filter '*.ts' | Select-String -Pattern 'NotifySpawnLayer|SetRevealId|GetRevealIds|checkReveal|OnHeroGrid' | Select-Object Path,LineNumber,Line | Format-Table -AutoSize -Wrap",
+    "state": "done",
+    "icon": "code"
+   },
+   {
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map\\MapModel.cs",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已查找文件内容 \"NotifyHeroGridChanged\" in C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已执行代码 $f='E:\\33days\\v1.0.25\\ 客户端 \\project33\\assets\\src\\app\\module\\linkageTarkov\\LinkageTarkovModel.ts'; Get-Content -LiteralPath $f | Select-Object -Skip 820 -First 80",
+    "state": "done",
+    "icon": "code"
+   },
+   {
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map\\MapModel.cs",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已查找文件内容 \"Fight|Battle|Attack\" in C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\monsterAction\\MonsterActionTracks.cs",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\monsterAction\\MonsterActionModule.cs",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已读取 C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\monsterAction\\MonsterActionTracks.cs",
+    "state": "done",
+    "icon": "read"
+   },
+   {
+    "kind": "step",
+    "text": "已查找文件内容 \"effect\\\\[|effect\\\\?\\\\[|\\\\\\\"path\\\\\\\"|effect as JObject|effect is JObject\" in C:\\project-x\\SunRise\\Assets\\GameMain\\Scripts\\Module\\map",
+    "state": "done",
+    "icon": "read"
+   }
+  ]
+ },
+ "result": {
+  "ok": true,
+  "diffs": []
+ }
+}
