@@ -97,5 +97,9 @@ check('审阅撤销：命令已注册', JSON.parse(fs.readFileSync(path.join(roo
 
 check('验证闭环：失败项可定位', panel.includes('parseVerifyLocations') && fs.readFileSync(path.join(root, 'media', 'chat.js'), 'utf8').includes('verify-location'));
 
+check('闭环：接受改动后自动验证', panel.includes('autoVerifyAfterAccept') && panel.includes('自动构建验证'));
+check('闭环：上下文 token 估算', panel.includes('postContextInfo') && panel.includes("type: 'contextInfo'"));
+check('闭环：自动验证可配置', JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).contributes.configuration.properties['doubao.verify.afterAccept'].default === true);
+
 console.log('\n结果：PASS ' + pass + '，FAIL ' + fail);
 process.exit(fail ? 1 : 0);

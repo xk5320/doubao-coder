@@ -3,7 +3,7 @@
   "displayName": "豆包编程助手",
   "description": "第三方豆包编程助手：侧边栏 AI 对话、Agent 工具调用、行内补全、行内改写（Ctrl+Alt+I），并支持把选区投送到豆包桌面客户端。",
   "icon": "media/doubao-icon.png",
-  "version": "0.46.0",
+  "version": "0.47.0",
   "publisher": "doubao-coder",
   "author": "艾米尔",
   "contributors": [
@@ -639,6 +639,11 @@
           "type": "string",
           "default": "",
           "description": "「测试」验证执行的命令；留空则自动检测（npm run test / cargo test）。"
+        },
+        "doubao.verify.afterAccept": {
+          "type": "boolean",
+          "default": true,
+          "description": "接受 AI 改动后自动运行构建验证，失败时自动把输出发给豆包修复。"
         }
       }
     }

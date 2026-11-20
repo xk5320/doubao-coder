@@ -91,6 +91,7 @@ type OutgoingMessage =
   | { type: 'syncLoading'; on: boolean; text?: string }
   | { type: 'proposal'; id: string; path: string; before: string; after: string; hunks?: DiffHunk[] }
   | { type: 'workspaceFiles'; files: string[] }
+  | { type: 'contextInfo'; total: number; items: Array<{ label: string; tokens: number }> }
   | { type: 'verifyStart'; kind: VerifyKind }
   | { type: 'verifyResult'; kind: VerifyKind; ok: boolean; code: number | null; command: string; output: string; error?: string; locations?: Array<{ path: string; line: number }> }
   | { type: 'catalog'; skills: DesktopSkillGroup[]; plugins: DesktopPlugin[] }
@@ -367,6 +368,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         void this.pushSetup();
         return;
       case 'user':
+        this.postContextInfo(message.text ?? '', message.refs ?? {});
         await this.handleUser(message.text ?? '', message.refs ?? {});
         return;
       case 'abort':
@@ -2204,8 +2206,62 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  /** 接受改动后自动构建；失败自动把输出发给豆包修复。 */
+  private async autoVerifyAfterAccept(): Promise<void> {
+    const config = readConfig();
+    if (!config.autoVerifyAfterAccept || this.running || this.disposed) {
+      return;
+    }
+    const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
+    if (!root) {
+      return;
+    }
+    this.post({ type: 'notice', text: '已接受改动，正在自动构建验证…' });
+    const result = await this.runVerification('build');
+    if (result.ok) {
+      return;
+    }
+    if (!result.command) {
+      return;
+    }
+    if (!this.running && !this.disposed) {
+      this.post({ type: 'notice', text: '自动验证失败，已把输出交给豆包定位修复。' });
+      await this.askAboutVerification();
+    }
+  }
+
+  /** 估算本次上下文规模并推给界面。 */
+  private postContextInfo(rawText: string, refs: ContextRefs): void {
+    const items: Array<{ label: string; tokens: number }> = [];
+    const editor = vscode.window.activeTextEditor;
+    try {
+      if (refs.currentFile && editor) {
+        items.push({ label: '当前文件', tokens: Math.ceil(Math.min(editor.document.getText().length, 4000) / 4) });
+      }
+      if (refs.selection && editor && !editor.selection.isEmpty) {
+        items.push({ label: '选区', tokens: Math.ceil(editor.document.getText(editor.selection).length / 4) });
+      }
+      if (refs.diagnostics && editor) {
+        const count = vscode.languages.getDiagnostics(editor.document.uri).length;
+        if (count > 0) {
+          items.push({ label: '诊断 ' + count + ' 条', tokens: count * 40 });
+        }
+      }
+    } catch {
+      /* 忽略读取失败 */
+    }
+    const mentions = Array.from(String(rawText || '').matchAll(/@([\w./\\-]+)/g)).slice(0, 6);
+    let mentionTokens = 0;
+    mentionTokens = mentions.length * 800;
+    if (mentions.length > 0) {
+      items.push({ label: mentions.length + ' 个 @ 引用', tokens: mentionTokens });
+    }
+    const total = items.reduce((sum, item) => sum + item.tokens, 0);
+    this.post({ type: 'contextInfo', total, items });
+  }
+
   /** 运行构建/测试并把输出回填到面板。 */
-  private async runVerification(kind: VerifyKind): Promise<void> {
+  private async runVerification(kind: VerifyKind): Promise<import('./verify').VerifyResult> {
     const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
     const config = readConfig();
     const override = kind === 'build' ? config.verifyBuildCommand : config.verifyTestCommand;
@@ -2223,6 +2279,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       locations: parseVerifyLocations(result.output),
     });
     log(result.ok ? '验证通过' : '验证失败', kind, result.command || '(无命令)');
+    return result;
   }
 
   /** 把失败的构建/测试输出作为上下文，让豆包修。 */
@@ -2290,6 +2347,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       }
       const skipped = proposal.hunks.length - selected.length;
       this.post({ type: 'notice', text: '已接受改动：' + proposal.path + (proposal.hunks.length > 0 ? '（应用 ' + selected.length + ' 块' + (skipped > 0 ? '，跳过 ' + skipped + ' 块' : '') + '）' : '') });
+      void this.autoVerifyAfterAccept();
     } catch (err) {
       this.post({ type: 'error', message: '写入失败：' + (err instanceof Error ? err.message : String(err)) });
     }

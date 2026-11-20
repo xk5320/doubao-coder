@@ -613,6 +613,8 @@ dispatch({ type: 'clear' });
 dispatch({ type: 'setup', state: { installed: true, running: false, loggedIn: false, ready: false, step: 'launch', detail: '调试端口连接不成功' } });
 check('初始化指引：提示安装/重启/登录/重试', harness.body.textContent.indexOf('重启计算机') >= 0 && harness.body.textContent.indexOf('登录账号') >= 0);
 dispatch({ type: 'setup', state: { installed: true, running: true, loggedIn: true, ready: true, step: 'ready', detail: 'ok' } });
+dispatch({ type: 'contextInfo', total: 1234, items: [{ label: '当前文件', tokens: 1000 }] });
+check('上下文 token：显示估算', harness.byId('context-hint').textContent.indexOf('tokens') >= 0);
 /* 生成能力单选互斥 */
 const quickButtons = harness.queryAll('.chat-action');
 const quickImage = quickButtons.find(function (b) { return b.getAttribute('data-chat-action') === 'image'; });

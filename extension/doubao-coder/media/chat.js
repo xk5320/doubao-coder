@@ -204,6 +204,7 @@ function renderTabs(tabs) {
 const runningBarEl = document.getElementById('running-bar');
 const runningTextEl = document.getElementById('running-text');
   const contextHint = document.getElementById('context-hint');
+  let contextTokens = 0;
   const chipMode = document.getElementById('chip-mode');
   const quickSkillsEl = document.getElementById('quick-skills');
   const quickChatEl = document.getElementById('quick-chat');
@@ -1603,7 +1604,8 @@ let historyLoadingText = '';
     if (refs.selection) active.push('选区');
     if (refs.diagnostics) active.push('诊断');
     if (contextHint) {
-      contextHint.textContent = active.length ? '上下文：' + active.join(' + ') : '无上下文';
+      const base = active.length ? '上下文：' + active.join(' + ') : '无上下文';
+    contextHint.textContent = contextTokens > 0 ? base + ' · 约 ' + Math.round(contextTokens) + ' tokens' : base;
     }
   }
 
@@ -3655,6 +3657,13 @@ let historyLoadingText = '';
         break;
       case 'proposal':
         renderProposal(message);
+        break;
+      case 'contextInfo':
+        contextTokens = Number(message.total || 0);
+        if (contextHint && Array.isArray(message.items) && message.items.length > 0) {
+          contextHint.title = message.items.map(function (item) { return item.label + ' ≈ ' + item.tokens + ' tokens'; }).join('\n');
+        }
+        updateContextHint();
         break;
       case 'workspaceFiles':
         workspaceFilesCache = Array.isArray(message.files) ? message.files : [];

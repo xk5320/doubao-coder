@@ -72,6 +72,8 @@ export interface DoubaoConfig {
   /** 构建/测试验证命令（空则自动检测）。 */
   verifyBuildCommand: string;
   verifyTestCommand: string;
+  /** 接受 AI 改动后自动运行构建/测试（默认开）。 */
+  autoVerifyAfterAccept: boolean;
 }
 
 /**
@@ -294,6 +296,7 @@ export function readConfig(): DoubaoConfig {
     reviewEdits: asBool(cfg.get<boolean>('reviewEdits'), true),
     verifyBuildCommand: String(cfg.get<string>('verify.buildCommand') || '').trim(),
     verifyTestCommand: String(cfg.get<string>('verify.testCommand') || '').trim(),
+    autoVerifyAfterAccept: asBool(cfg.get<boolean>('verify.afterAccept'), true),
   };
 }
 
