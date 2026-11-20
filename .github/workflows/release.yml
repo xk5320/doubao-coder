@@ -39,9 +39,12 @@ jobs:
           generate_release_notes: true
       - name: Publish to Marketplace
         shell: pwsh
-        if: ${{ secrets.VSCE_PAT != '' }}
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: |
+          if (-not $env:VSCE_PAT) {
+            Write-Host "未配置 VSCE_PAT，跳过 Marketplace 发布"
+            exit 0
+          }
           $vsix = Get-ChildItem *.vsix | Select-Object -First 1
           npx --yes @vscode/vsce publish --packagePath $vsix.FullName --allow-missing-repository
