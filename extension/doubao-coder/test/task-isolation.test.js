@@ -91,7 +91,8 @@ check('@ 文件选择器：界面菜单与插入', fs.readFileSync(path.join(roo
 const sessionsSrc = fs.readFileSync(path.join(root, 'src', 'chat', 'sessions.ts'), 'utf8');
 check('多项目隔离：会话按工作区作用域', sessionsSrc.includes('migrateFrom') && panel.includes('doubao.sessions:'));
 
-check('审阅撤销：已接受改动可撤销', panel.includes('undoLastAccepted') && panel.includes('lastAccepted'));
+check('审阅撤销：已接受改动可撤销', panel.includes('undoLastAccepted') && panel.includes('acceptedStack'));
+check('审阅撤销：逐块接受', panel.includes('computeHunks') && panel.includes('applyHunks'));
 check('审阅撤销：命令已注册', JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).contributes.commands.some(function (c) { return c.command === 'doubao.undoAcceptedEdit'; }));
 
 check('验证闭环：失败项可定位', panel.includes('parseVerifyLocations') && fs.readFileSync(path.join(root, 'media', 'chat.js'), 'utf8').includes('verify-location'));

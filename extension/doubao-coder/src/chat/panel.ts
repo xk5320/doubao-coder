@@ -30,6 +30,7 @@ import { convertLocalImages, localImagePath, mimeForImage } from './local-images
 import { activeDesktopId, activeDesktopTitle, desktopTarget, hasConversation, localTarget, matchConversation, noneTarget, normalizeTitle, shouldRestoreLastWindow, type ActiveTarget } from './active-target';
 import { addTab, nextActiveAfterClose, refreshTitle, removeTab, restoreTabs as restoreTabList, shouldAbortOnSwitch } from './tabs';
 import { runVerify, type VerifyKind } from './verify';
+import { applyHunks, computeHunks, type DiffHunk } from './diff';
 import { pickEffectiveModel } from './model-label';
 import { parseMarkdownBlocks } from './ast';
 import { SessionStore, newSessionId } from './sessions';
@@ -47,6 +48,8 @@ interface IncomingMessage {
   url?: string;
   /** 历史菜单里点某条豆包对话时带的序号。 */
   index?: number;
+  /** 审阅卡片勾选的 hunk 序号。 */
+  hunks?: number[];
   /** 回复里点「文件:行」时带的路径与行号。 */
   path?: string;
   line?: number;
@@ -86,7 +89,7 @@ type OutgoingMessage =
   | { type: 'history'; title: string; turns: Array<{ role: 'user' | 'assistant'; text: string }> }
   | { type: 'tabs'; tabs: Array<{ id: string; title: string; active: boolean; running: boolean; desktopTitle: string }> }
   | { type: 'syncLoading'; on: boolean; text?: string }
-  | { type: 'proposal'; id: string; path: string; before: string; after: string }
+  | { type: 'proposal'; id: string; path: string; before: string; after: string; hunks?: DiffHunk[] }
   | { type: 'workspaceFiles'; files: string[] }
   | { type: 'verifyStart'; kind: VerifyKind }
   | { type: 'verifyResult'; kind: VerifyKind; ok: boolean; code: number | null; command: string; output: string; error?: string; locations?: Array<{ path: string; line: number }> }
@@ -205,9 +208,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   /** 切换标签后从豆包读到的执行状态（用于标签小圆点）。 */
   private tabRunning = false;
   /** 待审阅的改动（AI 提议、用户接受后才落盘）。 */
-  private pendingProposals = new Map<string, { path: string; before: string; after: string }>();
-  /** 最近一次被接受的改动，用于撤销。 */
-  private lastAccepted: { path: string; before: string } | undefined;
+  private pendingProposals = new Map<string, { path: string; before: string; after: string; hunks: DiffHunk[] }>();
+  /** 已接受改动的撤销栈（最多 20 条）。 */
+  private acceptedStack: Array<{ path: string; before: string }> = [];
   /** 最近一次构建/测试输出，用于「问豆包修这个」。 */
   private lastVerify: { kind: VerifyKind; command: string; output: string } | undefined;
   private lastPasteAt = 0;
@@ -423,7 +426,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         void this.askAboutVerification();
         return;
       case 'proposalAction':
-        await this.handleProposal(message.id ?? '', message.action ?? '');
+        await this.handleProposal(message.id ?? '', message.action ?? '', message.hunks);
         return;
       case 'openFile':
         await this.openFileAt(message.path ?? '', Number(message.line ?? 0));
@@ -2188,15 +2191,14 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
   /** 撤销最近一次被接受的 AI 改动。 */
   public async undoLastAccepted(): Promise<void> {
-    const last = this.lastAccepted;
+    const last = this.acceptedStack.pop();
     if (!last) {
       this.post({ type: 'notice', text: '没有可撤销的已接受改动' });
       return;
     }
     try {
       await vscode.workspace.fs.writeFile(vscode.Uri.file(last.path), Buffer.from(last.before, 'utf8'));
-      this.lastAccepted = undefined;
-      this.post({ type: 'notice', text: '已撤销改动：' + last.path });
+      this.post({ type: 'notice', text: '已撤销改动：' + last.path + '（剩余可撤销 ' + this.acceptedStack.length + ' 次）' });
     } catch (err) {
       this.post({ type: 'error', message: '撤销失败：' + (err instanceof Error ? err.message : String(err)) });
     }
@@ -2243,14 +2245,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       return 'apply';
     }
     const id = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
-    this.pendingProposals.set(id, { path: filePath, before, after });
-    this.post({ type: 'proposal', id, path: filePath, before, after });
+    const hunks = computeHunks(before, after);
+    this.pendingProposals.set(id, { path: filePath, before, after, hunks });
+    this.post({ type: 'proposal', id, path: filePath, before, after, hunks });
     log('待审阅改动', filePath, after.length + ' 字');
     return 'review';
   }
 
   /** 处理审阅卡片：接受写盘 / 拒绝 / 查看差异。 */
-  private async handleProposal(id: string, action: string): Promise<void> {
+  private async handleProposal(id: string, action: string, selectedHunks?: number[]): Promise<void> {
     const proposal = this.pendingProposals.get(id);
     if (!proposal) {
       this.post({ type: 'notice', text: '这个改动已经处理过了' });
@@ -2275,10 +2278,18 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     try {
-      await vscode.workspace.fs.writeFile(vscode.Uri.file(proposal.path), Buffer.from(proposal.after, 'utf8'));
+      const selected = Array.isArray(selectedHunks) && selectedHunks.length > 0
+        ? selectedHunks
+        : proposal.hunks.map((_, index) => index);
+      const content = proposal.hunks.length > 0 ? applyHunks(proposal.before, proposal.hunks, selected) : proposal.after;
+      await vscode.workspace.fs.writeFile(vscode.Uri.file(proposal.path), Buffer.from(content, 'utf8'));
       this.pendingProposals.delete(id);
-      this.lastAccepted = { path: proposal.path, before: proposal.before };
-      this.post({ type: 'notice', text: '已接受改动：' + proposal.path });
+      this.acceptedStack.push({ path: proposal.path, before: proposal.before });
+      if (this.acceptedStack.length > 20) {
+        this.acceptedStack.shift();
+      }
+      const skipped = proposal.hunks.length - selected.length;
+      this.post({ type: 'notice', text: '已接受改动：' + proposal.path + (proposal.hunks.length > 0 ? '（应用 ' + selected.length + ' 块' + (skipped > 0 ? '，跳过 ' + skipped + ' 块' : '') + '）' : '') });
     } catch (err) {
       this.post({ type: 'error', message: '写入失败：' + (err instanceof Error ? err.message : String(err)) });
     }

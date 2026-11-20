@@ -65,20 +65,65 @@ function renderProposal(message) {
   title.title = message.path || '';
   card.appendChild(title);
   card.appendChild(el('div', 'proposal-meta', '旧 ' + String(message.before || '').length + ' 字 → 新 ' + String(message.after || '').length + ' 字'));
+
+  const hunks = Array.isArray(message.hunks) ? message.hunks : [];
+  const selected = new Set();
+  hunks.forEach(function (_, index) { selected.add(index); });
+  const rows = [];
+  if (hunks.length > 0) {
+    const list = el('div', 'proposal-hunks');
+    hunks.forEach(function (hunk, index) {
+      const row = el('div', 'proposal-hunk selected');
+      row.setAttribute('data-hunk', String(index));
+      row.appendChild(el('span', 'proposal-hunk-check', '✓'));
+      row.appendChild(el('span', 'proposal-hunk-title', '@@ 行 ' + (Number(hunk.oldStart) + 1) + '（+' + (hunk.newLines || []).length + ' / -' + (hunk.oldLines || []).length + '）'));
+      const previewText = ((hunk.newLines || []).length ? hunk.newLines : (hunk.oldLines || [])).slice(0, 2).join(' / ').slice(0, 90);
+      row.appendChild(el('div', 'proposal-hunk-preview', previewText));
+      row.addEventListener('click', function () {
+        if (card.classList.contains('decided')) {
+          return;
+        }
+        if (selected.has(index)) {
+          selected.delete(index);
+          row.classList.remove('selected');
+        } else {
+          selected.add(index);
+          row.classList.add('selected');
+        }
+      });
+      list.appendChild(row);
+      rows.push(row);
+    });
+    card.appendChild(list);
+  }
+
   const actions = el('div', 'proposal-actions');
-  const accept = el('button', 'btn btn-primary proposal-accept', '接受');
-  accept.type = 'button';
-  accept.addEventListener('click', function () {
-    vscode.postMessage({ type: 'proposalAction', id: message.id, action: 'accept' });
+  function finish(text) {
     card.classList.add('decided');
-    actions.textContent = '已接受';
+    rows.forEach(function (row) { row.classList.add('disabled'); });
+    actions.textContent = text;
+  }
+  const acceptSelected = el('button', 'btn btn-primary proposal-accept-selected', '接受选中');
+  acceptSelected.type = 'button';
+  acceptSelected.addEventListener('click', function () {
+    const picked = Array.from(selected).sort(function (a, b) { return a - b; });
+    if (hunks.length > 0 && picked.length === 0) {
+      return;
+    }
+    vscode.postMessage({ type: 'proposalAction', id: message.id, action: 'accept', hunks: picked });
+    finish('已接受 ' + picked.length + ' 块');
+  });
+  const acceptAll = el('button', 'btn proposal-accept', '全部接受');
+  acceptAll.type = 'button';
+  acceptAll.addEventListener('click', function () {
+    vscode.postMessage({ type: 'proposalAction', id: message.id, action: 'accept' });
+    finish('已接受全部改动');
   });
   const reject = el('button', 'btn proposal-reject', '拒绝');
   reject.type = 'button';
   reject.addEventListener('click', function () {
     vscode.postMessage({ type: 'proposalAction', id: message.id, action: 'reject' });
-    card.classList.add('decided');
-    actions.textContent = '已拒绝';
+    finish('已拒绝');
   });
   const diff = el('button', 'btn proposal-diff', '查看差异');
   diff.type = 'button';
@@ -86,7 +131,8 @@ function renderProposal(message) {
     vscode.postMessage({ type: 'proposalAction', id: message.id, action: 'diff' });
   });
   actions.appendChild(diff);
-  actions.appendChild(accept);
+  actions.appendChild(acceptSelected);
+  actions.appendChild(acceptAll);
   actions.appendChild(reject);
   card.appendChild(actions);
   messagesEl.appendChild(card);

@@ -599,7 +599,10 @@ const chatSource = fs.readFileSync(path.join(__dirname, '..', 'media', 'chat.js'
 check('子智能体步骤：注册 agent 图标', chatSource.indexOf("agent: '<svg") >= 0);
 dispatch({ type: 'clear' });
 dispatch({ type: 'proposal', id: 'p1', path: 'src/a.ts', before: 'old', after: 'new content' });
-check('审阅卡片：渲染标题与按钮', Boolean(harness.query('.proposal-card')) && harness.queryAll('.proposal-actions .btn').length === 3);
+check('审阅卡片：渲染标题与按钮', Boolean(harness.query('.proposal-card')) && harness.queryAll('.proposal-actions .btn').length >= 4);
+dispatch({ type: 'proposal', id: 'p2', path: 'src/b.ts', before: 'a\nb\nc', after: 'a\nB\nc', hunks: [{ oldStart: 1, oldLines: ['b'], newLines: ['B'] }] });
+check('审阅卡片：hunk 可勾选', harness.queryAll('.proposal-hunk').length === 1 && harness.query('.proposal-hunk').classList.contains('selected'));
+dispatch({ type: 'clear' });
 dispatch({ type: 'clear' });
 dispatch({ type: 'verifyResult', kind: 'build', ok: false, code: 1, command: 'npm run build', output: 'error TS1005' });
 check('验证卡片：显示失败与输出', Boolean(harness.query('.verify-card.fail')) && harness.query('.verify-output').textContent.indexOf('TS1005') >= 0);
