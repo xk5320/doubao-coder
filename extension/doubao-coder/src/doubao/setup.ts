@@ -5,7 +5,8 @@
  * 而不是让用户直接收到一句「连接 9222 失败」。
  */
 import { detectInstall, type DoubaoInstall } from './install';
-import { probeDesktop, type DesktopStatus } from '../bridge/desktop';
+import { isPortOpen, probeDesktop, type DesktopStatus } from '../bridge/desktop';
+import { classifyDesktop } from '../bridge/desktop-errors';
 
 export type SetupStep = 'install' | 'login' | 'launch' | 'ready';
 
@@ -23,6 +24,10 @@ export interface SetupState {
   step: SetupStep;
   /** 给用户看的一句话说明（含失败原因）。 */
   detail: string;
+  /** 问题分类码（ok / not-installed / port-closed / port-not-cdp / not-logged-in / no-page）。 */
+  code?: string;
+  /** 修复建议。 */
+  hint?: string;
   checkedAt: number;
 }
 
@@ -56,6 +61,7 @@ export async function checkEnvironment(port: number): Promise<SetupState> {
     };
   }
 
+  const portOpen = await isPortOpen(port).catch(() => false);
   let status: DesktopStatus;
   try {
     status = await probeDesktop(port);
@@ -69,6 +75,13 @@ export async function checkEnvironment(port: number): Promise<SetupState> {
 
   const running = Boolean(status.browser) || Boolean(status.targets?.length);
   const loggedIn = Boolean(status.loggedIn && status.hasEditor);
+  const diagnosis = classifyDesktop({
+    installed: true,
+    portOpen: portOpen || running,
+    running,
+    loggedIn,
+    hasEditor: Boolean(status.hasEditor),
+  });
 
   if (!running) {
     return {
@@ -78,7 +91,9 @@ export async function checkEnvironment(port: number): Promise<SetupState> {
       loggedIn: false,
       ready: false,
       step: 'launch',
-      detail: '检测到已安装，但调试端口没通：请先完全退出豆包，再点「以调试端口启动」。',
+      detail: diagnosis.title + '：' + diagnosis.hint,
+      code: diagnosis.code,
+      hint: diagnosis.hint,
       checkedAt,
     };
   }
@@ -91,7 +106,9 @@ export async function checkEnvironment(port: number): Promise<SetupState> {
       loggedIn: false,
       ready: false,
       step: 'login',
-      detail: '豆包已在调试端口上，但页面停在登录/首页：请在豆包窗口里登录账号并进入对话页。',
+      detail: diagnosis.title + '：' + diagnosis.hint,
+      code: diagnosis.code,
+      hint: diagnosis.hint,
       checkedAt,
     };
   }
@@ -104,6 +121,8 @@ export async function checkEnvironment(port: number): Promise<SetupState> {
     ready: true,
     step: 'ready',
     detail: '豆包桌面端已就绪，可以直接免 Key 对话。',
+    code: 'ok',
+    hint: '可以开始对话了。',
     checkedAt,
   };
 }

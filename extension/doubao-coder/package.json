@@ -3,7 +3,7 @@
   "displayName": "豆包编程助手",
   "description": "第三方豆包编程助手：侧边栏 AI 对话、Agent 工具调用、行内补全、行内改写（Ctrl+Alt+I），并支持把选区投送到豆包桌面客户端。",
   "icon": "media/doubao-icon.png",
-  "version": "0.47.0",
+  "version": "0.48.1",
   "publisher": "doubao-coder",
   "author": "艾米尔",
   "contributors": [
@@ -234,6 +234,10 @@
       {
         "command": "doubao.undoAcceptedEdit",
         "title": "豆包：撤销上一次已接受的改动"
+      },
+      {
+        "command": "doubao.reconnectDesktop",
+        "title": "豆包：重连桌面端"
       }
     ],
     "menus": {
@@ -308,6 +312,9 @@
         },
         {
           "command": "doubao.undoAcceptedEdit"
+        },
+        {
+          "command": "doubao.reconnectDesktop"
         }
       ]
     },
@@ -653,7 +660,7 @@
     "compile": "tsc -p .",
     "watch": "tsc -watch -p .",
     "mcp": "node ./out/mcp/server.js",
-    "test": "node test/policy.test.js && node test/task.test.js && node test/ptc-parser.test.js && node test/md-extractor.test.js && node test/cu-core.test.js && node test/read-last.test.js && node test/mcp-client.test.js && node test/checks.test.js && node test/mcp-integration.test.js && node test/checks-tool.test.js && node test/tool-args.test.js && node test/path-boundary.test.js && node test/write-race.test.js && node test/terminal-timeout.test.js && node test/guard.test.js && node test/policy-bypass.test.js && node test/ws-overflow.test.js && node test/mcp-server-flush.test.js && node test/webview-mode.test.js && node test/ui-states.test.js && node test/blocks.test.js && node test/pick-page.test.js && node test/model-label.test.js && node test/activity.test.js && node test/step-style.test.js && node test/expand.test.js && node test/history-loading.test.js && node test/watermark.test.js && node test/history-running.test.js && node test/running-bar.test.js && node test/mode-switch.test.js && node test/local-images.test.js && node test/task-isolation.test.js && node test/active-target.test.js && node test/tabs.test.js && node test/diff.test.js && node test/parity.test.js",
+    "test": "node test/policy.test.js && node test/task.test.js && node test/ptc-parser.test.js && node test/md-extractor.test.js && node test/cu-core.test.js && node test/read-last.test.js && node test/mcp-client.test.js && node test/checks.test.js && node test/mcp-integration.test.js && node test/checks-tool.test.js && node test/tool-args.test.js && node test/path-boundary.test.js && node test/write-race.test.js && node test/terminal-timeout.test.js && node test/guard.test.js && node test/policy-bypass.test.js && node test/ws-overflow.test.js && node test/mcp-server-flush.test.js && node test/webview-mode.test.js && node test/ui-states.test.js && node test/blocks.test.js && node test/pick-page.test.js && node test/model-label.test.js && node test/activity.test.js && node test/step-style.test.js && node test/expand.test.js && node test/history-loading.test.js && node test/watermark.test.js && node test/history-running.test.js && node test/running-bar.test.js && node test/mode-switch.test.js && node test/local-images.test.js && node test/task-isolation.test.js && node test/active-target.test.js && node test/tabs.test.js && node test/diff.test.js && node test/desktop-errors.test.js && node test/parity.test.js",
     "package": "npx --yes @vscode/vsce package"
   },
   "devDependencies": {

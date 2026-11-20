@@ -279,6 +279,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       );
     }),
 
+    vscode.commands.registerCommand('doubao.reconnectDesktop', async () => {
+      log('命令：重连豆包桌面端');
+      await provider.reconnectDesktop();
+    }),
+
     vscode.commands.registerCommand('doubao.undoAcceptedEdit', async () => {
       log('命令：撤销已接受的 AI 改动');
       await provider.undoLastAccepted();

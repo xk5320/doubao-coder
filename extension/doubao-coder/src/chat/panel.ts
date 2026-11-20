@@ -222,9 +222,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     /** 外部工具（MCP）路由器；每次取最新值，MCP 重连后无需重建面板。 */
     private readonly externalTools?: () => ExternalToolRouter | undefined,
   ) {
-    const scopedFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
+    const folders = (vscode.workspace.workspaceFolders ?? []).map((folder) => folder.uri.fsPath.toLowerCase()).sort();
+    const scopedFolder = folders.length === 1 ? folders[0] : folders.join('|');
     const scopeHash = scopedFolder
-      ? crypto.createHash('sha1').update(scopedFolder.toLowerCase()).digest('hex').slice(0, 8)
+      ? crypto.createHash('sha1').update(scopedFolder).digest('hex').slice(0, 8)
       : 'global';
     this.sessions = new SessionStore(context.globalState, 'doubao.sessions:' + scopeHash);
     this.sessions.migrateFrom(context.globalState, 'doubao.sessions');
@@ -2258,6 +2259,31 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     }
     const total = items.reduce((sum, item) => sum + item.tokens, 0);
     this.post({ type: 'contextInfo', total, items });
+  }
+
+  /** 断线重连：重新检测并尝试以调试端口启动豆包。 */
+  public async reconnectDesktop(): Promise<void> {
+    const config = readConfig();
+    if (config.authMode !== 'desktop') {
+      this.post({ type: 'notice', text: '当前不是桌面端模式，无需重连。' });
+      return;
+    }
+    this.post({ type: 'notice', text: '正在重新检测豆包连接…' });
+    const state = await checkEnvironment(config.desktopPort);
+    this.setupState = state;
+    this.post({ type: 'setup', state });
+    if (state.ready) {
+      this.post({ type: 'notice', text: '豆包连接已恢复。' });
+      return;
+    }
+    this.post({ type: 'notice', text: state.detail });
+    if (state.installed && (state.code === 'port-closed' || state.code === 'port-not-cdp')) {
+      try {
+        await vscode.commands.executeCommand('doubao.launchDesktop');
+      } catch (err) {
+        warn('断线重连启动失败', err instanceof Error ? err.message : String(err));
+      }
+    }
   }
 
   /** 运行构建/测试并把输出回填到面板。 */

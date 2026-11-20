@@ -12,6 +12,7 @@ import { CdpSession, DOUBAO_DEBUG_PORT, getVersion, listTargets, pickChatPage, t
 import { MD_INSTALL_JS, expandStepsJs, readLastReplyJs } from './md-extractor';
 import type { ReplyBlock } from './blocks';
 import { stallDecision } from './activity';
+import * as net from 'node:net';
 import { log, warn } from '../log';
 
 /* ------------------------------- 页面选择器 ------------------------------- */
@@ -92,6 +93,27 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
 }
 
 /** 探测本机豆包是否以调试端口在运行，并报告页面状态。 */
+/** 端口是否可连接（用于区分“未启动”和“被占用”）。 */
+export function isPortOpen(port: number, timeoutMs = 400): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    let done = false;
+    const finish = (value: boolean) => {
+      if (done) {
+        return;
+      }
+      done = true;
+      socket.destroy();
+      resolve(value);
+    };
+    socket.setTimeout(timeoutMs);
+    socket.once('connect', () => finish(true));
+    socket.once('timeout', () => finish(false));
+    socket.once('error', () => finish(false));
+    socket.connect(port, '127.0.0.1');
+  });
+}
+
 export async function probeDesktop(port = DOUBAO_DEBUG_PORT): Promise<DesktopStatus> {
   let browser: string | undefined;
   try {

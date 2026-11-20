@@ -101,5 +101,9 @@ check('闭环：接受改动后自动验证', panel.includes('autoVerifyAfterAcc
 check('闭环：上下文 token 估算', panel.includes('postContextInfo') && panel.includes("type: 'contextInfo'"));
 check('闭环：自动验证可配置', JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).contributes.configuration.properties['doubao.verify.afterAccept'].default === true);
 
+check('连接问题分类：独立模块', fs.existsSync(path.join(root, 'src', 'bridge', 'desktop-errors.ts')));
+check('连接问题分类：setup 使用分类', fs.readFileSync(path.join(root, 'src', 'doubao', 'setup.ts'), 'utf8').includes('classifyDesktop'));
+check('多根工作区：scope 覆盖所有根目录', panel.includes('folders.join'));
+
 console.log('\n结果：PASS ' + pass + '，FAIL ' + fail);
 process.exit(fail ? 1 : 0);
