@@ -38,6 +38,7 @@ import { listDesktopConversations, openDesktopConversation, readDesktopConversat
 import { collectAllDesktopConversations, openDesktopConversationById } from '../bridge/desktop-history-all';
 import { CLI_DOC_URL, CLI_INSTALL_COMMAND, isResumeRejected, runCliTask, statusLine } from '../cli/runner';
 import { checkCliAuth, detectCli } from '../cli/detect';
+import { startCliLogin, readQrFile } from '../cli/login';
 
 /** Webview → 扩展 的消息。 */
 interface IncomingMessage {
@@ -1681,6 +1682,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
       const started = Date.now();
       let result = await runOnce(this.cliSessionId);
+      if (!result.ok && /conflict|正在切换账号|please retry/i.test(result.stderr)) {
+        this.post({ type: 'notice', text: 'CLI 正在切换账号，稍等 3 秒自动重试…' });
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        result = await runOnce(this.cliSessionId);
+      }
       if (!result.ok && this.cliSessionId && isResumeRejected(result.stderr)) {
         this.cliSessionId = undefined;
         this.post({ type: 'notice', text: 'CLI 会话已失效，改为新会话重试…' });
@@ -2750,33 +2756,71 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     void this.watchRunningTask(title);
   }
 
-  /** CLI 未登录：自动打开登录终端，轮询登录状态，成功后自动重试一次。 */
+  /** CLI 未登录：在对话里渲染登录二维码，轮询登录状态，成功后自动重试一次。 */
+  private cliLoginProcess: import('node:child_process').ChildProcess | undefined;
+
   private async handleCliLoginRequired(config: DoubaoConfig, retryText: string): Promise<void> {
     const token = (this.cliLoginToken += 1);
-    this.post({ type: 'notice', text: '检测到 CLI 未登录：已打开登录终端，请在终端里扫码…' });
-    void vscode.commands.executeCommand('doubao.cliLogin');
-    for (let i = 0; i < 45; i += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 4000));
-      if (token !== this.cliLoginToken || this.disposed) {
-        return;
-      }
-      const info = await detectCli(config.cliPath).catch(() => undefined);
-      if (!info || !info.installed || !info.binary) {
-        continue;
-      }
-      const auth = await checkCliAuth(info).catch(() => ({ loggedIn: false, detail: '' }));
-      if (auth.loggedIn) {
-        this.post({ type: 'notice', text: 'CLI 登录成功，正在自动重试刚才的任务…' });
-        if (!this.running && !this.disposed) {
-          void this.handleUser(retryText, {});
-        }
-        return;
-      }
-      if (i > 0 && i % 5 === 0) {
-        this.post({ type: 'notice', text: '仍在等待扫码登录完成…（' + i * 4 + ' 秒）' });
-      }
+    const info = await detectCli(config.cliPath).catch(() => undefined);
+    if (!info || !info.installed || !info.binary) {
+      this.post({ type: 'notice', text: '没有检测到豆包 CLI，请先安装后再登录。' });
+      return;
     }
-    this.post({ type: 'notice', text: '还没检测到登录完成：完成扫码后再发一次即可。' });
+    this.post({ type: 'notice', text: '检测到 CLI 未登录：正在获取登录二维码…' });
+    let qrShown = false;
+    try {
+      const child = startCliLogin({
+        binary: info.binary,
+        cwd: workspaceRoot() || undefined,
+        onQr: (qrPath) => {
+          qrShown = true;
+          void this.showCliLoginQr(qrPath);
+        },
+      });
+      this.cliLoginProcess = child;
+      child.on('exit', () => {
+        if (this.cliLoginProcess === child) {
+          this.cliLoginProcess = undefined;
+        }
+      });
+      for (let i = 0; i < 45; i += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 4000));
+        if (token !== this.cliLoginToken || this.disposed) {
+          return;
+        }
+        if (!qrShown && i === 2) {
+          this.post({ type: 'notice', text: '未拿到二维码图片，改为在终端里扫码登录；完成后会自动重试。' });
+          void vscode.commands.executeCommand('doubao.cliLogin');
+        }
+        const auth = await checkCliAuth(info).catch(() => ({ loggedIn: false, detail: '' }));
+        if (auth.loggedIn) {
+          this.post({ type: 'notice', text: 'CLI 登录成功，正在自动重试刚才的任务…' });
+          if (!this.running && !this.disposed) {
+            void this.handleUser(retryText, {});
+          }
+          return;
+        }
+        if (i > 0 && i % 5 === 0) {
+          this.post({ type: 'notice', text: '等待扫码登录中…（' + i * 4 + ' 秒）' });
+        }
+      }
+      this.post({ type: 'notice', text: '还没检测到登录完成：完成扫码后再发一次即可。' });
+    } finally {
+      this.cliLoginProcess?.kill();
+      this.cliLoginProcess = undefined;
+    }
+  }
+
+  /** 把 CLI 生成的二维码图片渲染进对话。 */
+  private async showCliLoginQr(pathText: string): Promise<void> {
+    const data = await readQrFile(pathText, 6000);
+    if (!data) {
+      this.post({ type: 'notice', text: '二维码图片还没生成好，可执行「豆包: 登录 CLI」在终端扫码。' });
+      return;
+    }
+    const mime = /\.jpe?g$/i.test(pathText) ? 'image/jpeg' : 'image/png';
+    this.post({ type: 'image', url: 'data:' + mime + ';base64,' + data.toString('base64'), alt: '豆包 CLI 登录二维码' });
+    this.post({ type: 'notice', text: '请用豆包 App 扫描上方二维码登录；登录成功后会自动重试刚才的任务。' });
   }
   /** 本地图片 → data URL（带缓存；只处理盘符/file: 路径）。 */
   private imageFileData(src: string): string | undefined {

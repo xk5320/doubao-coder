@@ -115,5 +115,8 @@ check('MCP 模板：命令已注册', JSON.parse(fs.readFileSync(path.join(root,
 check('CLI 登录引导：自动打开登录并重试', panel.includes('handleCliLoginRequired') && panel.includes('登录成功，正在自动重试'));
 check('CLI 登录引导：识别 login_required', panel.includes('login_required'));
 
+check('CLI 登录：二维码渲染到对话', panel.includes('showCliLoginQr') && panel.includes("type: 'image'") && panel.includes('startCliLogin'));
+check('CLI 登录：conflict 自动重试', panel.includes('正在切换账号'));
+
 console.log('\n结果：PASS ' + pass + '，FAIL ' + fail);
 process.exit(fail ? 1 : 0);
