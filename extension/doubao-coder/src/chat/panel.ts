@@ -226,6 +226,31 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   private tabTitleDirty = false;
   /** 切换标签后从豆包读到的执行状态（用于标签小圆点）。 */
   private tabRunning = false;
+  /** 当前流式输出归属的会话 id：切到别的会话后，旧任务的流必须被丢弃。 */
+  private streamOwner = '';
+  /** 当前回合令牌：新对话/新回合会自增，旧回合收尾时不能再改新回合状态。 */
+  private runToken = 0;
+
+  /** 开始一轮：标记运行中、绑定输出会话，返回令牌给收尾用。 */
+  private beginRun(): number {
+    this.runToken += 1;
+    this.running = true;
+    this.streamOwner = this.sessionId;
+    this.postState();
+    return this.runToken;
+  }
+
+  /** 结束一轮：只有「当前回合」才能把界面改回空闲，避免旧任务串到新对话。 */
+  private endRun(token: number): void {
+    if (token !== this.runToken) {
+      return;
+    }
+    this.running = false;
+    this.abortController = undefined;
+    if (!this.disposed) {
+      this.postState();
+    }
+  }
   /** 后台任务（旁观/长任务），供任务中心展示。 */
   private backgroundTasks: Array<{ id: string; title: string; status: 'running' | 'done' | 'failed'; progress?: string; startedAt: number }> = [];
   /** 待审阅的改动（AI 提议、用户接受后才落盘）。 */
@@ -324,8 +349,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   /** 新建任务/对话：清空扩展状态，按类型选择本地电脑或对话，并新建桌面端会话。 */
   private async newSession(kind: 'task' | 'chat'): Promise<void> {
     this.abort();
+    // 新对话不再绑定上一个任务：否则发送前会把豆包切回旧对话、旧流也会继续写进来
+    this.setActiveTarget(noneTarget());
     // 换一个会话 ID：否则新建的对话会继续往旧记录里追加，历史里就只剩一条。
     this.sessionId = newSessionId();
+    // 用哨兵阻断旧任务流：直到新回合开始时才重新绑定到具体会话
+    this.streamOwner = '#none';
     this.tabTitleDirty = false;
     // 新任务/新对话立刻出现在标签栏，豆包回复后再用豆包标题刷新
     try {
@@ -585,6 +614,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   }
 
   private abort(): void {
+    // 作废当前回合令牌：旧回合的 finally 不能再把新对话改回空闲/继续写内容
+    this.runToken += 1;
+    // 断开本轮的所有后台同步/旁观，避免旧任务继续往新对话写内容
+    this.syncPoller?.stop('用户停止或切换会话');
+    this.syncPoller = undefined;
+    this.streamOwner = '#none';
     if (this.abortController) {
       this.abortController.abort('用户停止');
       this.abortController = undefined;
@@ -709,8 +744,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     this.lastUserText = `【任务模式】${text}`;
     this.assistantBuf = '';
     // 先把消息回显出来（立刻可见），再去做同步/等待豆包。
-    this.running = true;
-    this.postState();
+    const runToken = this.beginRun();
     // 技能/插件清单已在启动时预读取；未加载时才补一次，新建任务不重复刷新。
     if (!this.catalogLoaded) {
       void this.syncDesktopCatalog('首次任务', { silent: true });
@@ -836,8 +870,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       this.post({ type: 'assistant_done', aborted: true, at: Date.now() });
     } finally {
       ark?.abort('任务结束');
-      this.running = false;
-      this.abortController = undefined;
+      this.endRun(runToken);
       if (!this.disposed) {
         this.postState();
       }
@@ -1633,8 +1666,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   private async runCli(config: DoubaoConfig, userContent: string): Promise<void> {
     const controller = new AbortController();
     this.abortController = controller;
-    this.running = true;
-    this.postState();
+    const runToken = this.beginRun();
     let cliWatchdog: NodeJS.Timeout | undefined;
 
     try {
@@ -1797,8 +1829,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       if (cliWatchdog) {
         clearInterval(cliWatchdog);
       }
-      this.running = false;
-      this.abortController = undefined;
+      this.endRun(runToken);
       this.persistTurn();
       this.postSources(this.assistantBuf);
       if (!this.disposed) {
@@ -1827,8 +1858,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     const systemPrompt = await buildSystemPrompt(config, effective);
     const controller = new AbortController();
     this.abortController = controller;
-    this.running = true;
-    this.postState();
+    const runToken = this.beginRun();
 
     const runtime: ToolRuntime = {
       config,
@@ -1928,8 +1958,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     } finally {
       this.syncPoller?.stop('本轮结束');
       this.syncPoller = undefined;
-      this.running = false;
-      this.abortController = undefined;
+      this.endRun(runToken);
       this.persistTurn();
       this.postSources(this.assistantBuf);
       void this.refreshTabTitleFromDesktop();
@@ -1961,8 +1990,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     const controller = new AbortController();
     this.client = client;
     this.abortController = controller;
-    this.running = true;
-    this.postState();
+    const runToken = this.beginRun();
 
     const runtime: ToolRuntime = {
       config,
@@ -2005,9 +2033,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       }
       this.post({ type: 'assistant_done', aborted: true, at: Date.now() });
     } finally {
-      this.running = false;
+      this.endRun(runToken);
       this.client = undefined;
-      this.abortController = undefined;
       if (!this.disposed) {
         this.postState();
       }
@@ -2734,10 +2761,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async watchRunningTask(title: string): Promise<void> {
-    this.running = true;
     const controller = new AbortController();
     this.abortController = controller;
-    this.postState();
+    const runToken = this.beginRun();
     this.post({ type: 'notice', text: `「${title}」仍在豆包侧执行，正在同步进度…` });
     this.startBackgroundTask('watch:' + title, title);
     try {
@@ -2764,8 +2790,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     } catch (err) {
       warn('旁观任务失败', err instanceof Error ? err.message : String(err));
     } finally {
-      this.running = false;
-      this.abortController = undefined;
+      this.endRun(runToken);
       this.finishBackgroundTask('watch:' + title, 'done');
       const suppress = this.pendingContinue;
       this.pendingContinue = false;
@@ -3113,6 +3138,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
   /** 只在「该对话仍是激活目标」时才推送到面板；后台任务反馈只记日志，不抢界面。 */
   private postIfActive(title: string, message: OutgoingMessage): boolean {
+    if (this.streamOwner && this.streamOwner !== this.sessionId) {
+      return false;
+    }
     const wanted = activeDesktopTitle(this.activeTarget);
     const actual = normalizeTitle(title);
     if (wanted && actual && wanted !== actual) {
@@ -3306,6 +3334,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         this.openSession(next);
       } else {
         this.sessionId = newSessionId();
+        this.streamOwner = '#none';
         this.history = [];
         this.post({ type: 'clear' });
       }
@@ -3315,6 +3344,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   /** 定时同步快照：只推「激活目标」的对话，后台任务只记日志。 */
   private async pushSyncSnapshot(snap: SyncSnapshot): Promise<void> {
     if (this.disposed) {
+      return;
+    }
+    // 只在「发起同步的那个会话」里渲染，切换会话后旧同步结果直接丢弃
+    if (this.streamOwner !== this.sessionId) {
       return;
     }
     const wanted = activeDesktopTitle(this.activeTarget);
@@ -3505,6 +3538,23 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   /* ---------------------------------------------------------------------- */
 
   private post(message: OutgoingMessage): void {
+    // 流式内容只允许落在「发起它的会话」里：用户开新对话/切标签后，旧任务不能再往当前对话写内容。
+    const STREAM_TYPES = new Set<string>([
+      'assistant_delta',
+      'assistant_done',
+      'blocks',
+      'ast',
+      'block',
+      'tool_start',
+      'tool_end',
+      'generating',
+      'syncStatus',
+      'round',
+      'image',
+    ]);
+    if (this.streamOwner && this.streamOwner !== this.sessionId && STREAM_TYPES.has(message.type)) {
+      return;
+    }
     if (!this.view) {
       return;
     }

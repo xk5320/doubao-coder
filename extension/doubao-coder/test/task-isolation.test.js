@@ -128,5 +128,14 @@ check('优先级：可一键切回桌面版', extSrc.includes('doubao.useDesktop
 check('CLI 静默超时提示', panel.includes('sawCliOutput') && panel.includes('一分钟没有任何输出'));
 check('设置中心顺序：桌面版优先', fs.readFileSync(path.join(root, 'media', 'settings.js'), 'utf8').includes("['desktop', 'cli', 'ark']"));
 
+check('新对话：清除激活目标', panel.includes("this.setActiveTarget(noneTarget())") && panel.includes('新对话不再绑定上一个任务'));
+check('新对话：流式内容按会话隔离', panel.includes('streamOwner') && panel.includes('STREAM_TYPES'));
+check('新对话：停止旧同步器', panel.includes("syncPoller?.stop('用户停止或切换会话')"));
+check('同步快照：只渲染发起会话', panel.includes('只在「发起同步的那个会话」里渲染'));
+
+check('新对话：回合令牌防止旧任务改状态', panel.includes('private runToken = 0;') && panel.includes('private beginRun(') && panel.includes('private endRun('));
+check('新对话：中止时作废令牌', panel.includes('作废当前回合令牌'));
+check('新对话：5 处回合走 beginRun', (panel.match(/const runToken = this\.beginRun\(\)/g) || []).length === 5, String((panel.match(/const runToken = this\.beginRun\(\)/g) || []).length));
+
 console.log('\n结果：PASS ' + pass + '，FAIL ' + fail);
 process.exit(fail ? 1 : 0);

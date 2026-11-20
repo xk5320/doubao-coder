@@ -229,13 +229,13 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       'duration=' + timeoutRun.durationMs,
     );
 
-    /* 超时杀进程树：父进程拉起的孙进程若存活，会在 1.6s 后写标记文件。 */
+    /* 超时杀进程树：父进程拉起的孙进程若存活，会在 2.6s 后写标记文件（给孤儿清理留出时间）。 */
     const treeDir = makeTemp('tree');
     const marker = path.join(treeDir, 'orphan-marker.txt');
     const childCode =
       'setTimeout(() => { require("fs").writeFileSync(' +
       JSON.stringify(marker) +
-      ', "orphan"); }, 1600);';
+      ', "orphan"); }, 2600);';
     const parentCode =
       'require("node:child_process").spawn(process.execPath, ["-e", ' +
       JSON.stringify(childCode) +
@@ -243,7 +243,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     await runChecks(treeDir, {
       checks: [nodeCheck('tree', '进程树清理', parentCode, { timeoutMs: 500 })],
     });
-    await delay(1900);
+    await delay(2900);
     check(
       'run：超时后杀掉整个子进程树（孙进程未能写标记）',
       !fs.existsSync(marker),
