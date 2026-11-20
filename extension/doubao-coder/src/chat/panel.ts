@@ -1620,11 +1620,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         this.post({ type: 'assistant_done', aborted: true, at: Date.now() });
         const message = info.error || '没有找到豆包 CLI。请先安装：' + CLI_INSTALL_COMMAND;
         this.post({ type: 'error', message });
-        const action = await vscode.window.showErrorMessage(message, '查看安装文档', '打开设置');
-        if (action === '查看安装文档') {
+        const action = await vscode.window.showErrorMessage(message, '自动安装', '打开设置中心', '查看安装文档');
+        if (action === '自动安装') {
+          await vscode.commands.executeCommand('doubao.cliAutoInstall');
+        } else if (action === '打开设置中心') {
+          await vscode.commands.executeCommand('doubao.openSettingsPanel');
+        } else if (action === '查看安装文档') {
           await vscode.env.openExternal(vscode.Uri.parse(CLI_DOC_URL));
-        } else if (action === '打开设置') {
-          await vscode.commands.executeCommand('doubao.openSettings');
         }
         return;
       }

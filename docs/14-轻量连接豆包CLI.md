@@ -1,6 +1,6 @@
 # 14. 轻量连接豆包 CLI：方案、取舍与落地
 
-> 版本：0.52.0
+> 版本：0.53.0
 > 相关代码：`src/cli/runner.ts`、`src/cli/detect.ts`、`src/chat/panel.ts`（runCli）、`src/extension.ts`（连接方式选择）
 > 官方文档：https://www.doubao.com/work/docs/zh-cn/doubao-cli
 > 终端使用：https://www.doubao.com/work/docs/zh-cn/articles/870164132353-cli-terminal
@@ -186,12 +186,15 @@ VS Code 扩展没有真正的「安装时回调」，最接近的时机是 **首
 | `doubao.cli.effort` | 空 | `Low/Medium/High`；空 = 不传 |
 | `doubao.cli.timeoutMs` | 600000 | 单次任务超时 |
 
-### 5.5 设置中心（0.52）
+### 5.5 设置中心
 
 首次选择只解决「第一次用哪个通道」。之后所有切换、登录和常用配置集中在
 侧边栏标题齿轮 / 命令「豆包: 设置中心」打开的 Webview 面板里：
 
 - **连接方式**：三张卡片（CLI / 桌面版 / Ark），卡片上直接显示安装、登录、端口、Key 状态；
+- **未安装 CLI 的自动引导**：安装卡片 + Node/npm 环境检测 + 「一键自动安装」（面板内实时日志、
+  通知进度、可取消）；安装完成自动检测版本并打开登录；失败可回退终端安装 / 下载 Node.js；
+  从其他通道切到 CLI、聊天里发现 CLI 缺失、或打开设置中心时，都会询问/提供自动安装；
 - **登录与连接**：CLI 登录、检查登录、安装方式、终端、后台服务；桌面版连接检测、以调试端口启动；Ark 设置/清除 Key；
 - **CLI 配置**：权限策略、模型、推理强度、超时、可执行文件；
 - **桌面版配置**：端口、路径、工作模式、模型、推理强度；
@@ -209,6 +212,7 @@ webview 不能借消息改写任意 settings.json 键。
 | 豆包: 登录 CLI | 在集成终端跑 `doubao login --qr=png` |
 | 豆包: 检查 CLI 安装与登录 | 版本 + `auth status --verify` |
 | 豆包: 查看 CLI 安装方式 | 复制安装命令/打开文档/在终端里填命令 |
+| 豆包: 自动安装 CLI | 打开设置中心并立即执行 npm 安装（可取消、实时日志） |
 | 豆包: 在终端打开 CLI（交互模式） | 打开官方 TUI，用于多轮、/resume、定时任务 |
 | 豆包: 启动 CLI 后台服务（远程派发） | `doubao --service-start`，手机/其他设备可派发任务 |
 
@@ -259,6 +263,8 @@ webview 不能借消息改写任意 settings.json 键。
 4. **行内补全仍走 Ark**：CLI 没有 FIM 接口；没有 Key 时建议关闭 `doubao.enableInlineCompletion`。
 5. **订阅门槛**：CLI 仅团队/企业订阅可用，个人用户继续用桌面版/Ark。
 6. 需要处理 CLI 升级带来的参数变化（`--effort` 取值等）。
+7. 自动安装依赖能在 PATH / 常见目录里找到标准安装的 Node.js；nvm/Volta 等非标准布局失败时，
+   用安装卡片里的「在终端中安装」即可（命令与官方文档一致）。
 
 ---
 
@@ -266,8 +272,9 @@ webview 不能借消息改写任意 settings.json 键。
 
 - 新增 `test/cli.test.js`：33 项离线断言（参数顺序、ANSI/回车清理、会话 ID、resume 失效、
   成功/失败/中断/超时）；
-- 设置中心：`settings.test.js` 28 项（白名单/归一化/清单/产物）+ `settings-ui.test.js` 16 项
-  （伪 DOM 真跑 settings.js：渲染、切换、配置更新、动作、toast）；
+- 设置中心：`settings.test.js` 33 项（白名单/归一化/清单/产物）+ `settings-ui.test.js` 26 项
+  （伪 DOM 真跑 settings.js：渲染、切换、配置更新、动作、安装卡片/进度/toast）；
+- 自动安装器：`cli-install.test.js` 17 项（npm 参数、node/npm-cli 定位、成功/失败/取消/超时）；
 - 受影响模块测试：`model-label`、`webview-mode`、`mode-switch`、`task-isolation`、
   `mcp-templates`、`parity` 全绿；
 - 手动清单：选择 CLI → 未安装引导 → 安装 → 登录 → 发任务 → 停止 → 超时 → 切换桌面版/Ark。

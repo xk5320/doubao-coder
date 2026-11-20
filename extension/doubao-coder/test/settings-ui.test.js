@@ -146,6 +146,43 @@ check('提示：保存成功 toast', harness.byId('toast').textContent.includes(
 harness.send({ type: 'authResult', ok: false, detail: '未登录' });
 check('提示：登录失败 toast', harness.byId('toast').textContent.includes('未登录'));
 
+/* 未安装：安装引导卡片 */
+const missing = JSON.parse(JSON.stringify(state));
+missing.cli.installed = false;
+missing.cli.version = '';
+missing.cli.runtime = { ok: true, nodeVersion: 'v24.20.0', npmVersion: '11.19.0' };
+const missingErrors = harness.send({ type: 'state', state: missing });
+check('引导：未安装时显示安装卡片', missingErrors.length === 0 && app.textContent.includes('还没安装豆包 CLI'), missingErrors.map((e) => e && e.stack).join('\n'));
+check('引导：显示 Node/npm 环境', app.textContent.includes('Node v24.20.0') && app.textContent.includes('npm 11.19.0'));
+const installButtons = app.querySelectorAll('button');
+const autoInstall = installButtons.find((item) => item.dataset.action === 'cliAutoInstall');
+check('引导：提供一键自动安装', Boolean(autoInstall));
+app.dispatchEvent({ type: 'click', target: autoInstall });
+check(
+  '引导：点击自动安装发 action',
+  harness.posted.some((item) => item && item.type === 'action' && item.value === 'cliAutoInstall'),
+  JSON.stringify(harness.posted.slice(-3)),
+);
+
+harness.send({ type: 'installStart' });
+const installLog = app.querySelector('#installLog');
+check('安装中：日志区展开且按钮禁用', Boolean(installLog) && !installLog.classList.contains('hidden') && autoInstall.disabled === true);
+harness.send({ type: 'installProgress', line: 'added 1 package' });
+check('安装中：进度写入日志', installLog.textContent.includes('added 1 package'), installLog.textContent);
+harness.send({ type: 'installDone', ok: true, version: '2.37.2' });
+check('安装完成：toast 提示', harness.byId('toast').textContent.includes('安装完成'));
+check('安装完成：按钮恢复可用', autoInstall.disabled === false);
+
+/* 未安装且缺少 Node：给出下载入口 */
+const noNode = JSON.parse(JSON.stringify(missing));
+noNode.cli.runtime = { ok: false, error: '未找到 Node.js' };
+harness.send({ type: 'state', state: noNode });
+check('引导：环境缺失提示', app.textContent.includes('环境缺失') && app.textContent.includes('未找到 Node.js'));
+check(
+  '引导：提供 Node.js 下载入口',
+  app.querySelectorAll('button').some((item) => item.dataset.action === 'openNodeDownload'),
+);
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 if (fail > 0) {
   process.exitCode = 1;

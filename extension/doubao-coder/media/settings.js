@@ -253,9 +253,62 @@
     return box.root;
   }
 
+  function renderInstallCard(cli) {
+    const card = el('div', 'install-card');
+    const head = el('div', 'install-head');
+    head.appendChild(el('span', 'install-dot', '!'));
+    const text = el('div', 'install-text');
+    text.appendChild(el('div', 'install-title', '还没安装豆包 CLI'));
+    text.appendChild(
+      el(
+        'div',
+        'install-desc',
+        '一键安装会在本机执行 npm install -g @bytedance/doubao-cli；需要 Node.js 18+ 和豆包团队/企业订阅。安装输出会显示在下面。',
+      ),
+    );
+    head.appendChild(text);
+    card.appendChild(head);
+
+    const runtime = cli.runtime;
+    const status = el('div', 'install-runtime ' + (runtime && runtime.ok ? 'ok' : 'bad'));
+    status.textContent =
+      runtime && runtime.ok
+        ? '环境就绪：Node ' + (runtime.nodeVersion || '?') + ' · npm ' + (runtime.npmVersion || '?')
+        : '环境缺失：' + (runtime && runtime.error ? runtime.error : '未检测到 Node.js / npm');
+    card.appendChild(status);
+
+    const steps = el('ol', 'install-steps');
+    for (const step of ['安装 CLI', '扫码登录', '回侧边栏发任务']) {
+      steps.appendChild(el('li', '', step));
+    }
+    card.appendChild(steps);
+
+    const rowActions = el('div', 'actions');
+    rowActions.appendChild(button('一键自动安装', 'cliAutoInstall', 'primary'));
+    rowActions.appendChild(button('在终端中安装', 'openTerminalInstall'));
+    rowActions.appendChild(button('复制命令', 'copyInstall'));
+    rowActions.appendChild(button('查看文档', 'openDocs', 'ghost'));
+    if (!runtime || !runtime.ok) {
+      rowActions.appendChild(button('下载 Node.js', 'openNodeDownload', 'link'));
+    }
+    card.appendChild(rowActions);
+
+    const log = el('pre', 'install-log hidden');
+    log.id = 'installLog';
+    card.appendChild(log);
+    return card;
+  }
+
   function renderCli() {
     const cli = state.cli || {};
     const box = section('豆包 CLI 配置', '任务交给官方 CLI 执行；权限/工具/技能都在 CLI 侧');
+    if (!cli.installed) {
+      box.body.appendChild(renderInstallCard(cli));
+      box.body.appendChild(
+        row('可执行文件', inputFor('cli.path', cli.path, 'text', '留空自动探测'), 'CLI 装在非默认位置时在这里指定，然后点右上角「重新检测」'),
+      );
+      return box.root;
+    }
     box.body.appendChild(
       banner(
         Boolean(cli.installed && cli.loggedIn !== false),
@@ -463,6 +516,51 @@
     }
     if (message.type === 'authResult') {
       toast(message.ok ? '登录有效' : '未登录：' + (message.detail || ''), message.ok ? 'ok' : 'bad');
+      return;
+    }
+    if (message.type === 'installStart') {
+      const log = app.querySelector('#installLog');
+      if (log) {
+        log.textContent = '';
+        log.classList.remove('hidden');
+      }
+      const auto = app.querySelector('[data-action="cliAutoInstall"]');
+      if (auto) {
+        auto.disabled = true;
+        auto.textContent = '正在安装…';
+      }
+      toast('开始安装豆包 CLI…', 'ok');
+      return;
+    }
+    if (message.type === 'installProgress') {
+      const log = app.querySelector('#installLog');
+      if (log) {
+        log.classList.remove('hidden');
+        const line = el('div', 'install-log-line', message.line || '');
+        log.appendChild(line);
+        while (log.children.length > 200) {
+          log.removeChild(log.firstChild);
+        }
+        log.scrollTop = log.scrollHeight;
+      }
+      return;
+    }
+    if (message.type === 'installDone') {
+      const auto = app.querySelector('[data-action="cliAutoInstall"]');
+      if (auto) {
+        auto.disabled = false;
+        auto.textContent = message.ok ? '安装完成' : '一键自动安装';
+      }
+      if (message.ok) {
+        toast('安装完成' + (message.version ? ' v' + message.version : ''), 'ok');
+      } else {
+        toast('安装失败：' + (message.error || ''), 'bad');
+        const log = app.querySelector('#installLog');
+        if (log) {
+          log.classList.remove('hidden');
+          log.appendChild(el('div', 'install-log-line bad', message.error || '安装失败'));
+        }
+      }
     }
   });
 

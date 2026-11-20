@@ -50,6 +50,7 @@ check('清单：设置中心命令已声明', commands.includes('doubao.openSett
 const menus = (pkg.contributes.menus['view/title'] || []).map((item) => item.command);
 check('清单：侧边栏标题按钮', menus.includes('doubao.openSettingsPanel'));
 check('清单：激活事件包含设置中心', pkg.activationEvents.includes('onCommand:doubao.openSettingsPanel'));
+check('清单：自动安装命令', commands.includes('doubao.cliAutoInstall') && pkg.activationEvents.includes('onCommand:doubao.cliAutoInstall'));
 check('清单：版本 >= 0.51.0', String(pkg.version) >= '0.51.0');
 
 /* ---- 产物 ---- */
@@ -64,6 +65,11 @@ check('前端：登录/检查按钮', js.includes("'cliLogin'") && js.includes("
 const backend = fs.readFileSync(path.join(root, 'out', 'settings', 'panel.js'), 'utf8');
 check('后端：注册命令处理', backend.includes("'setMode'") && backend.includes('normalizeSettingValue'));
 check('后端：CLI 登录动作', backend.includes("'cliLogin'"));
+check('后端：一键自动安装动作', backend.includes('cliAutoInstall') && backend.includes('runNpmInstall'));
+check('后端：切到 CLI 时提示安装', backend.includes('是否现在自动安装'));
+check('前端：未安装引导卡片', js.includes('还没安装豆包 CLI') && js.includes('cliAutoInstall'));
+check('安装器产物存在', fs.existsSync(path.join(root, 'out', 'cli', 'install.js')));
+check('前端：安装进度消息', js.includes("'installProgress'") && js.includes("'installDone'"));
 const extensionJs = fs.readFileSync(path.join(root, 'out', 'extension.js'), 'utf8');
 check('扩展：注册设置中心命令', extensionJs.includes('doubao.openSettingsPanel'));
 

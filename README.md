@@ -30,7 +30,7 @@
 | 功能 | 说明 |
 | --- | --- |
 | **本机豆包 CLI（轻量，推荐）** | 调用已登录的官方 `doubao -p`：文件读写、终端、技能、子 Agent、权限策略全由 CLI 执行，扩展只做侧边栏界面；安装后首次激活三选一（CLI / 桌面版 / Ark），可随时切换。需要 Node 18+ 与豆包团队/企业订阅 |
-| **设置中心** | 命令「豆包: 设置中心」或侧边栏标题齿轮：集中切换连接方式、检查登录/连接、修改 CLI/桌面/Ark 与通用配置；所有改动即时生效 |
+| **设置中心** | 命令「豆包: 设置中心」或侧边栏标题齿轮：集中切换连接方式、检查登录/连接、修改 CLI/桌面/Ark 与通用配置；所有改动即时生效。未安装 CLI 时给安装卡片，支持**一键自动安装**（实时日志、可取消），装完自动引导登录 |
 | **桌面端免 Key 模式** | 直接驱动你**已登录**的豆包桌面端：扩展通过 CDP（`--remote-debugging-port=9222`）把问题写进输入框、点发送、流式读回回复并还原 Markdown。登录态/签名/风控全部由官方客户端完成，**不需要 API Key** |
 | **PTC 工具调用（默认开）** | 桌面端通道只有纯文本，所以用 **PTC（Programmatic Tool Calling）**：模型输出 ` ```tool ` 代码块 → 扩展解析执行 8 个内置工具（外加任意 MCP 工具）→ 把 `<tool_result>` 发回同一会话。免 Key 也能读写工作区 |
 | 侧边栏对话 | 活动栏「豆包编程助手」图标 → 「豆包对话」Webview，流式输出、Markdown 渲染、代码块「复制 / 插入」按钮 |
@@ -190,6 +190,7 @@ npx --yes @vscode/vsce package
 | `doubao.cliLogin` | 登录豆包 CLI | |
 | `doubao.cliCheck` | 检查 CLI 安装与登录 | |
 | `doubao.cliInstall` | 查看 CLI 安装方式 | |
+| `doubao.cliAutoInstall` | 自动安装 CLI（打开设置中心并开始 npm 安装） | |
 | `doubao.cliOpenTerminal` | 在终端打开 CLI（交互模式） | |
 | `doubao.cliStartService` | 启动 CLI 后台服务（远程派发） | |
 | `doubao.openSettingsPanel` | 设置中心（连接 / 登录 / 常用配置） | 侧边栏标题齿轮 |

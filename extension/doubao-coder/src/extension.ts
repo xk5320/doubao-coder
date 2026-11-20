@@ -22,7 +22,7 @@ import { McpManager } from './mcp/manager';
 import { MCP_TEMPLATES, mergeMcpTemplate } from './mcp/templates';
 import { detectChecks, formatCheckReport, runChecks } from './agent/checks';
 import { checkCliAuth, clearCliCache, cliLoginArgs, detectCli, type CliInfo } from './cli/detect';
-import { disposeSettingsPanel, openSettingsPanel } from './settings/panel';
+import { disposeSettingsPanel, openSettingsPanel, startCliAutoInstall } from './settings/panel';
 import { CLI_DOC_URL, CLI_INSTALL_COMMAND } from './cli/runner';
 
 let chatProvider: ChatViewProvider | undefined;
@@ -332,6 +332,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('doubao.openSettingsPanel', async () => {
       log('命令：打开设置中心');
       openSettingsPanel(context);
+    }),
+
+    vscode.commands.registerCommand('doubao.cliAutoInstall', async () => {
+      log('命令：自动安装豆包 CLI');
+      startCliAutoInstall(context);
     }),
 
     // 内部命令：设置中心检查完 CLI 后，让状态栏复用最新结果。
@@ -935,10 +940,13 @@ async function afterModeChosen(mode: 'cli' | 'desktop' | 'ark'): Promise<void> {
     if (!info.installed) {
       const action = await vscode.window.showInformationMessage(
         '已切到豆包 CLI 模式，但本机还没检测到 CLI。安装命令：' + CLI_INSTALL_COMMAND,
+        '自动安装',
         '安装说明',
         '复制命令',
       );
-      if (action === '安装说明') {
+      if (action === '自动安装') {
+        await vscode.commands.executeCommand('doubao.cliAutoInstall');
+      } else if (action === '安装说明') {
         await openCliInstall();
       } else if (action === '复制命令') {
         await vscode.env.clipboard.writeText(CLI_INSTALL_COMMAND);

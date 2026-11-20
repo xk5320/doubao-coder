@@ -11,13 +11,16 @@ import * as fs from 'node:fs';
 import * as vscode from 'vscode';
 import { probeDesktop } from '../bridge/desktop';
 import { checkCliAuth, clearCliCache, detectCli, type CliAuthState } from '../cli/detect';
-import { CLI_DOC_URL, CLI_INSTALL_COMMAND } from '../cli/runner';
+import { CLI_DOC_URL, CLI_INSTALL_COMMAND, normalizeCliText } from '../cli/runner';
+import { clearNpmRuntimeCache, detectNpmRuntime, runNpmInstall, type NpmRuntime } from '../cli/install';
 import { readConfig } from '../config';
 import { isAuthMode, normalizeSettingValue } from './schema';
 
 let panel: vscode.WebviewPanel | undefined;
 let disposables: vscode.Disposable[] = [];
 let lastAuth: CliAuthState | undefined;
+let pendingAutoInstall = false;
+let webviewReady = false;
 
 export function openSettingsPanel(context: vscode.ExtensionContext): void {
   if (panel) {
@@ -31,6 +34,7 @@ export function openSettingsPanel(context: vscode.ExtensionContext): void {
   });
   const mediaRoot = vscode.Uri.joinPath(context.extensionUri, 'media');
   panel.webview.options = { enableScripts: true, localResourceRoots: [mediaRoot] };
+  webviewReady = false;
   panel.webview.html = buildHtml(panel.webview, mediaRoot, context);
   panel.webview.onDidReceiveMessage(
     (message: unknown) => {
@@ -42,6 +46,7 @@ export function openSettingsPanel(context: vscode.ExtensionContext): void {
   panel.onDidDispose(
     () => {
       panel = undefined;
+      webviewReady = false;
       lastAuth = undefined;
       for (const item of disposables) {
         item.dispose();
@@ -60,6 +65,17 @@ export function refreshSettingsPanel(context: vscode.ExtensionContext): void {
   }
 }
 
+/** 从命令/其他面板发起：打开设置中心，等 webview ready 后立即开始自动安装。 */
+export function startCliAutoInstall(context: vscode.ExtensionContext): void {
+  missingPrompted = true;
+  if (panel && webviewReady) {
+    void autoInstallCli(context);
+    return;
+  }
+  pendingAutoInstall = true;
+  openSettingsPanel(context);
+}
+
 export function disposeSettingsPanel(): void {
   panel?.dispose();
   panel = undefined;
@@ -75,6 +91,28 @@ async function pushState(context: vscode.ExtensionContext): Promise<void> {
     return;
   }
   void panel.webview.postMessage({ type: 'state', state });
+  const cli = state.cli as { installed?: boolean } | undefined;
+  if (!missingPrompted && state.authMode === 'cli' && cli && cli.installed === false) {
+    missingPrompted = true;
+    void promptMissingCli(context);
+  }
+}
+
+let missingPrompted = false;
+
+/** 打开设置/切到 CLI 时发现没装：一次询问是否自动安装。 */
+async function promptMissingCli(context: vscode.ExtensionContext): Promise<void> {
+  const action = await vscode.window.showInformationMessage(
+    '未检测到豆包 CLI，是否现在自动安装？需要 Node.js 18+。',
+    '自动安装',
+    '安装说明',
+    '稍后',
+  );
+  if (action === '自动安装') {
+    await autoInstallCli(context);
+  } else if (action === '安装说明') {
+    await vscode.commands.executeCommand('doubao.cliInstall');
+  }
 }
 
 async function buildState(context: vscode.ExtensionContext): Promise<Record<string, unknown>> {
@@ -85,6 +123,7 @@ async function buildState(context: vscode.ExtensionContext): Promise<Record<stri
     error: err instanceof Error ? err.message : String(err),
   }));
   const desktopInstalled = Boolean(config.desktopExePath) && fs.existsSync(config.desktopExePath);
+  const runtime: NpmRuntime | undefined = cli.installed ? undefined : await detectNpmRuntime();
   return {
     authMode: config.authMode,
     version: String(context.extension.packageJSON.version || ''),
@@ -103,6 +142,7 @@ async function buildState(context: vscode.ExtensionContext): Promise<Record<stri
       model: config.cliModel,
       effort: config.cliEffort,
       timeoutMs: config.cliTimeoutMs,
+      runtime: runtime || null,
     },
     desktop: {
       installed: desktopInstalled,
@@ -139,8 +179,15 @@ async function onMessage(context: vscode.ExtensionContext, message: Record<strin
   switch (message.type) {
     case 'ready':
     case 'refresh':
+      if (message.type === 'ready') {
+        webviewReady = true;
+      }
       lastAuth = undefined;
       await pushState(context);
+      if (message.type === 'ready' && pendingAutoInstall) {
+        pendingAutoInstall = false;
+        await autoInstallCli(context);
+      }
       return;
     case 'setMode':
       await setMode(context, message.mode);
@@ -170,6 +217,7 @@ async function setMode(context: vscode.ExtensionContext, raw: unknown): Promise<
     lastAuth = undefined;
     clearCliCache();
     post({ type: 'notice', message: '已切换到' + modeLabel(raw) + '，可在上方检查登录/连接状态。' });
+
   } catch (err) {
     post({ type: 'error', message: '切换失败：' + errorText(err) });
   }
@@ -224,6 +272,19 @@ async function runAction(context: vscode.ExtensionContext, action: string): Prom
       case 'cliInstall':
         await vscode.commands.executeCommand('doubao.cliInstall');
         break;
+      case 'cliAutoInstall':
+        await autoInstallCli(context);
+        return;
+      case 'openTerminalInstall': {
+        const terminal = vscode.window.createTerminal({ name: '安装豆包 CLI' });
+        terminal.show();
+        terminal.sendText(CLI_INSTALL_COMMAND, true);
+        post({ type: 'notice', message: '已在终端里执行安装命令，完成后点「重新检测」。' });
+        break;
+      }
+      case 'openNodeDownload':
+        await vscode.env.openExternal(vscode.Uri.parse('https://nodejs.org/zh-cn/download'));
+        break;
       case 'cliTerminal':
         await vscode.commands.executeCommand('doubao.cliOpenTerminal');
         break;
@@ -264,6 +325,101 @@ async function runAction(context: vscode.ExtensionContext, action: string): Prom
     post({ type: 'error', message: '操作失败：' + errorText(err) });
   }
   await pushState(context);
+}
+
+
+let installing = false;
+
+/** 一键安装：同一时间只允许一个安装任务。 */
+async function autoInstallCli(context: vscode.ExtensionContext): Promise<void> {
+  if (installing) {
+    post({ type: 'notice', message: '安装正在进行中，请稍候…' });
+    return;
+  }
+  installing = true;
+  try {
+    await runAutoInstall(context);
+  } finally {
+    installing = false;
+  }
+}
+
+/** 实际安装流程：用当前进程的 Node 执行 npm install -g，输出实时回报到面板。 */
+async function runAutoInstall(context: vscode.ExtensionContext): Promise<void> {
+  const runtime = await detectNpmRuntime(true);
+  if (!runtime.ok || !runtime.npmCli || !runtime.nodeExec) {
+    const message = '自动安装需要 Node.js 18+ 和 npm：' + (runtime.error || '未找到 Node.js / npm');
+    post({ type: 'installDone', ok: false, error: message });
+    post({ type: 'error', message });
+    await pushState(context);
+    return;
+  }
+
+  post({ type: 'installStart' });
+  const controller = new AbortController();
+  let lastProgressAt = 0;
+  let result: Awaited<ReturnType<typeof runNpmInstall>>;
+  try {
+    result = await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: '正在安装豆包 CLI…', cancellable: true },
+      async (progress, token) => {
+        const sub = token.onCancellationRequested(() => controller.abort());
+        try {
+          return await runNpmInstall({
+            nodeExec: runtime.nodeExec as string,
+            npmCli: runtime.npmCli as string,
+            signal: controller.signal,
+            onLine: (line) => {
+              post({ type: 'installProgress', line });
+              if (Date.now() - lastProgressAt > 300) {
+                lastProgressAt = Date.now();
+                progress.report({ message: line.slice(0, 90) });
+              }
+            },
+          });
+        } finally {
+          sub.dispose();
+        }
+      },
+    );
+  } catch (err) {
+    post({ type: 'installDone', ok: false, error: errorText(err) });
+    post({ type: 'error', message: '安装失败：' + errorText(err) });
+    await pushState(context);
+    return;
+  }
+
+  clearNpmRuntimeCache();
+  clearCliCache();
+  if (!result.ok) {
+    const detail = result.aborted
+      ? '已取消安装。'
+      : result.timedOut
+        ? '安装超时（15 分钟）。'
+        : result.error || (result.output ? normalizeCliText(result.output).slice(-600) : 'npm 退出码 ' + result.code);
+    post({ type: 'installDone', ok: false, error: detail });
+    post({ type: 'error', message: '安装失败：' + detail });
+    await pushState(context);
+    return;
+  }
+
+  let info = await detectCli(readConfig().cliPath);
+  for (let attempt = 0; attempt < 10 && !info.installed; attempt += 1) {
+    await delay(1000);
+    clearCliCache();
+    info = await detectCli(readConfig().cliPath);
+  }
+  post({ type: 'installDone', ok: true, version: info.version || '' });
+  post({
+    type: 'notice',
+    message: info.installed
+      ? '豆包 CLI 安装完成，正在打开登录…'
+      : 'npm 已完成，但暂未检测到 doubao；可点右上角「重新检测」。',
+  });
+  await pushState(context);
+  if (info.installed) {
+    void vscode.commands.executeCommand('doubao.cliLogin');
+  }
 }
 
 /** 跟随用户当前的配置层级：workspace 里覆盖过的键不要偷偷写回 global。 */

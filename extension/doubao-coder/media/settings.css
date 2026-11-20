@@ -439,6 +439,94 @@ button.link:hover {
   border-color: var(--vscode-inputValidation-errorBorder, #be1100);
 }
 
+
+/* 未安装时的引导卡片 */
+
+.install-card {
+  margin: 10px 0 4px;
+  padding: 14px;
+  border: 1px dashed var(--vscode-inputValidation-warningBorder, #b89500);
+  border-radius: 10px;
+  background: var(--vscode-textCodeBlock-background, rgba(127, 127, 127, 0.06));
+}
+
+.install-head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.install-dot {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  text-align: center;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--vscode-button-foreground, #fff);
+  background: var(--vscode-inputValidation-warningBorder, #b89500);
+}
+
+.install-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.install-desc {
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.55;
+  opacity: 0.78;
+}
+
+.install-runtime {
+  margin-top: 10px;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.install-runtime.ok {
+  color: var(--vscode-testing-iconPassed, #388a34);
+}
+
+.install-runtime.bad {
+  color: var(--vscode-testing-iconFailed, #d16969);
+}
+
+.install-steps {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  font-size: 11px;
+  line-height: 1.7;
+  opacity: 0.82;
+}
+
+.install-log {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  max-height: 190px;
+  overflow: auto;
+  border-radius: 6px;
+  border: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.2));
+  background: var(--vscode-editor-background);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.install-log-line.bad {
+  color: var(--vscode-testing-iconFailed, #d16969);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 @media (max-width: 700px) {
   .modes {
     grid-template-columns: 1fr;
