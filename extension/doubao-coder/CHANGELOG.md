@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.50.0
+
+- **GitHub Actions**：新增 CI（push/PR 编译+全量测试）与 Release（打 tag 自动打包 vsix、
+  创建 GitHub Release 并上传产物；配置 `VSCE_PAT` secret 时自动发布到 Marketplace）；
+- **MCP 模板一键添加**：命令「豆包：添加 MCP 模板」内置文件系统 / Git / 网页抓取 / SQLite 模板，
+  自动写入 `doubao.mcp.servers`（同名覆盖）。
 ## 0.49.0
 
 - **后台任务中心**：旁观/长任务在标签栏下方显示任务条（标题、执行中/已完成、进度），不抢当前标签；

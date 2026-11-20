@@ -7,10 +7,11 @@ export const CONFIG_SECTION = 'doubao';
 export interface DoubaoConfig {
   /**
    * 接入模式：
+   * - `cli`：调用本机豆包 CLI（官方 Agent，工具/技能/子 Agent 都由 CLI 负责），扩展只做界面；
    * - `desktop`：用已登录的豆包桌面端（CDP 驱动），不需要 API Key；
    * - `ark`：走火山方舟 OpenAI 兼容接口，需要 API Key。
    */
-  authMode: 'desktop' | 'ark';
+  authMode: 'cli' | 'desktop' | 'ark';
   baseUrl: string;
   apiKey: string;
   model: string;
@@ -74,6 +75,16 @@ export interface DoubaoConfig {
   verifyTestCommand: string;
   /** 接受 AI 改动后自动运行构建/测试（默认开）。 */
   autoVerifyAfterAccept: boolean;
+  /** 豆包 CLI 可执行文件路径；留空按应用数据目录 / PATH 自动探测。 */
+  cliPath: string;
+  /** CLI 非交互任务的权限策略（直接传给 --permission-mode）。 */
+  cliPermissionMode: 'ask_always' | 'ask_risky' | 'always_allow';
+  /** CLI 模型；留空使用 CLI 的 Auto。 */
+  cliModel: string;
+  /** CLI 推理强度；空表示不传 --effort。 */
+  cliEffort: 'Low' | 'Medium' | 'High' | '';
+  /** 单次 CLI 任务超时（毫秒）。 */
+  cliTimeoutMs: number;
 }
 
 /**
@@ -179,6 +190,31 @@ function normalizeReasoning(value: unknown): '低' | '中' | '高' | '极高' | 
   return raw === '低' || raw === '中' || raw === '高' || raw === '极高' ? raw : '';
 }
 
+function normalizeCliPermission(value: unknown): 'ask_always' | 'ask_risky' | 'always_allow' {
+  const raw = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  if (raw === 'ask_always') {
+    return 'ask_always';
+  }
+  if (raw === 'always_allow') {
+    return 'always_allow';
+  }
+  return 'ask_risky';
+}
+
+function normalizeCliEffort(value: unknown): 'Low' | 'Medium' | 'High' | '' {
+  const raw = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  if (raw === 'low') {
+    return 'Low';
+  }
+  if (raw === 'medium') {
+    return 'Medium';
+  }
+  if (raw === 'high') {
+    return 'High';
+  }
+  return '';
+}
+
 
 /**
  * 解析 `doubao.mcp.servers`。
@@ -255,7 +291,8 @@ export function readConfig(): DoubaoConfig {
     asString(cfg.get<string>('baseUrl'), envFirst(['ARK_BASE_URL', 'DOUBAO_BASE_URL']) || DEFAULT_BASE_URL),
   );
   const authModeRaw = asString(cfg.get<string>('authMode'), 'desktop').toLowerCase();
-  const authMode: DoubaoConfig['authMode'] = authModeRaw === 'ark' ? 'ark' : 'desktop';
+  const authMode: DoubaoConfig['authMode'] =
+    authModeRaw === 'cli' ? 'cli' : authModeRaw === 'ark' ? 'ark' : 'desktop';
 
   return {
     authMode,
@@ -297,6 +334,11 @@ export function readConfig(): DoubaoConfig {
     verifyBuildCommand: String(cfg.get<string>('verify.buildCommand') || '').trim(),
     verifyTestCommand: String(cfg.get<string>('verify.testCommand') || '').trim(),
     autoVerifyAfterAccept: asBool(cfg.get<boolean>('verify.afterAccept'), true),
+    cliPath: asString(cfg.get<string>('cli.path'), ''),
+    cliPermissionMode: normalizeCliPermission(cfg.get<string>('cli.permissionMode')),
+    cliModel: asString(cfg.get<string>('cli.model'), ''),
+    cliEffort: normalizeCliEffort(cfg.get<string>('cli.effort')),
+    cliTimeoutMs: Math.round(asNumber(cfg.get<number>('cli.timeoutMs'), 600_000, 30_000, 3_600_000)),
   };
 }
 
@@ -339,8 +381,13 @@ export function validateConfig(config: DoubaoConfig): ConfigValidation {
     if (config.apiKey && /[\s]/.test(config.apiKey)) {
       problems.push('apiKey 中包含空白字符，请检查是否复制错误。');
     }
-  } else if (!config.desktopExePath) {
+  } else if (config.authMode === 'desktop' && !config.desktopExePath) {
     problems.push('没有找到豆包安装路径：请配置 doubao.desktop.exePath。');
+  } else if (config.authMode === 'cli' && config.cliPath) {
+    const fs = require('node:fs') as typeof import('node:fs');
+    if (!fs.existsSync(config.cliPath)) {
+      problems.push('doubao.cli.path 指向的文件不存在：' + config.cliPath);
+    }
   }
   return { ok: problems.length === 0, problems };
 }
@@ -428,7 +475,7 @@ export function resolveInsideRoot(root: string, relativeOrAbsolute: string): str
 }
 
 export function configSignature(config: DoubaoConfig): string {
-  return [config.baseUrl, config.model, config.apiKeySource, String(config.enableInlineCompletion), String(config.mcpServers.length)].join('|');
+  return [config.authMode, config.baseUrl, config.model, config.apiKeySource, config.cliPath, String(config.enableInlineCompletion), String(config.mcpServers.length)].join('|');
 }
 
 /** 配置变更时记录一条日志，方便排查“改了设置没生效”。 */

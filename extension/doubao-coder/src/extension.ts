@@ -19,11 +19,18 @@ import { detectInstall } from './doubao/install';
 import { applyNoWatermark } from './doubao/watermark';
 import { error as logError, initLog, log, showLogs, uptimeSeconds } from './log';
 import { McpManager } from './mcp/manager';
+import { MCP_TEMPLATES, mergeMcpTemplate } from './mcp/templates';
 import { detectChecks, formatCheckReport, runChecks } from './agent/checks';
+import { checkCliAuth, clearCliCache, cliLoginArgs, detectCli, type CliInfo } from './cli/detect';
+import { CLI_DOC_URL, CLI_INSTALL_COMMAND } from './cli/runner';
 
 let chatProvider: ChatViewProvider | undefined;
 let statusBar: vscode.StatusBarItem | undefined;
 let mcpManager: McpManager | undefined;
+/** 最近一次 CLI 探测结果，供状态栏同步显示（探测是异步的）。 */
+let cliInfoCache: CliInfo | undefined;
+/** 安装后是否已经问过用户选哪种连接方式（全局一次，不按工作区）。 */
+const CONNECTION_MODE_KEY = 'doubao.connectionModeChosen';
 
 const execFileAsync = promisify(execFile);
 
@@ -191,6 +198,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   statusBar.show();
   context.subscriptions.push(statusBar);
   refreshStatusBar();
+  void refreshCliInfo();
+
+  // 首次安装后只问一次：轻量 CLI / 豆包桌面版 / Ark API Key。
+  // 已经显式设置过 doubao.authMode 的老用户不打断，只补记标记。
+  void (async () => {
+    await sleep(800);
+    if (context.globalState.get<boolean>(CONNECTION_MODE_KEY)) {
+      return;
+    }
+    if (authModeExplicitlyChosen()) {
+      await context.globalState.update(CONNECTION_MODE_KEY, true);
+      return;
+    }
+    await chooseConnectionMode(context, true);
+  })();
 
   // ---------- 命令 ----------
   context.subscriptions.push(
@@ -279,9 +301,44 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       );
     }),
 
+    vscode.commands.registerCommand('doubao.addMcpTemplate', async () => {
+      const root = workspaceRoot() || process.cwd();
+      const picked = await vscode.window.showQuickPick(
+        MCP_TEMPLATES.map((template) => ({ label: template.name, description: template.description, template })),
+        { title: '添加 MCP 模板', placeHolder: '选择一个常用 MCP server 写入配置' },
+      );
+      if (!picked) {
+        return;
+      }
+      const config = vscode.workspace.getConfiguration('doubao');
+      const merged = mergeMcpTemplate(config.get<unknown>('mcp.servers'), picked.template.build(root));
+      await config.update('mcp.servers', merged, vscode.ConfigurationTarget.Global);
+      vscode.window.showInformationMessage('已添加 MCP 模板：' + picked.label + '（重新加载窗口后生效）');
+    }),
+
     vscode.commands.registerCommand('doubao.reconnectDesktop', async () => {
       log('命令：重连豆包桌面端');
       await provider.reconnectDesktop();
+    }),
+
+    vscode.commands.registerCommand('doubao.selectConnectionMode', async () => {
+      log('命令：选择连接方式');
+      await chooseConnectionMode(context, false);
+    }),
+
+    vscode.commands.registerCommand('doubao.cliLogin', async () => {
+      log('命令：登录豆包 CLI');
+      await loginCli();
+    }),
+
+    vscode.commands.registerCommand('doubao.cliCheck', async () => {
+      log('命令：检查豆包 CLI');
+      await checkCli();
+    }),
+
+    vscode.commands.registerCommand('doubao.cliInstall', async () => {
+      log('命令：安装豆包 CLI');
+      await openCliInstall();
     }),
 
     vscode.commands.registerCommand('doubao.undoAcceptedEdit', async () => {
@@ -613,6 +670,222 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 }
 
+
+/* -------------------------------------------------------------------------- */
+/* 连接方式：轻量 CLI / 桌面版 / Ark API Key                                   */
+/* -------------------------------------------------------------------------- */
+
+function authModeExplicitlyChosen(): boolean {
+  const inspect = vscode.workspace.getConfiguration('doubao').inspect<string>('authMode');
+  return Boolean(inspect?.globalValue ?? inspect?.workspaceValue ?? inspect?.workspaceFolderValue);
+}
+
+async function refreshCliInfo(): Promise<void> {
+  try {
+    cliInfoCache = await detectCli(readConfig().cliPath);
+  } catch {
+    cliInfoCache = undefined;
+  }
+  refreshStatusBar();
+}
+
+/** 安装引导：给命令、给文档、或直接在终端里填好命令（不替用户执行）。 */
+async function openCliInstall(): Promise<void> {
+  const pick = await vscode.window.showInformationMessage(
+    '豆包 CLI 需要 Node.js 18+，目前仅对豆包团队/企业订阅账号开放。安装命令：' + CLI_INSTALL_COMMAND,
+    '复制命令',
+    '在终端里安装',
+    '查看文档',
+  );
+  if (pick === '复制命令') {
+    await vscode.env.clipboard.writeText(CLI_INSTALL_COMMAND);
+    vscode.window.showInformationMessage('安装命令已复制。');
+  } else if (pick === '在终端里安装') {
+    const terminal = vscode.window.createTerminal({ name: '安装豆包 CLI' });
+    terminal.show();
+    terminal.sendText(CLI_INSTALL_COMMAND, false);
+  } else if (pick === '查看文档') {
+    await vscode.env.openExternal(vscode.Uri.parse(CLI_DOC_URL));
+  }
+}
+
+/** 在集成终端里跑 doubao login --qr=png，扫码在官方 CLI 里完成。 */
+async function loginCli(): Promise<void> {
+  const config = readConfig();
+  const info = await detectCli(config.cliPath);
+  cliInfoCache = info;
+  refreshStatusBar();
+  if (!info.installed || !info.binary) {
+    await openCliInstall();
+    return;
+  }
+  clearCliCache(info.binary);
+  const terminal = vscode.window.createTerminal({
+    name: '豆包 CLI 登录',
+    shellPath: info.binary,
+    shellArgs: cliLoginArgs(),
+  });
+  terminal.show();
+  const action = await vscode.window.showInformationMessage(
+    '已打开登录终端：用豆包或飞书移动端扫码完成授权。二维码图片路径会打印在终端里。',
+    '我已完成登录',
+    '查看文档',
+  );
+  if (action === '我已完成登录') {
+    await checkCli();
+  } else if (action === '查看文档') {
+    await vscode.env.openExternal(vscode.Uri.parse(CLI_DOC_URL));
+  }
+}
+
+/** 检查 CLI 是否安装、登录是否有效。 */
+async function checkCli(): Promise<void> {
+  const config = readConfig();
+  const info = await detectCli(config.cliPath);
+  cliInfoCache = info;
+  refreshStatusBar();
+  if (!info.installed) {
+    await openCliInstall();
+    return;
+  }
+  const auth = await checkCliAuth(info);
+  if (auth.loggedIn) {
+    vscode.window.showInformationMessage('豆包 CLI 可用：v' + (info.version ?? '?') + '，登录有效。');
+    return;
+  }
+  const action = await vscode.window.showWarningMessage(
+    '豆包 CLI v' + (info.version ?? '?') + ' 还没有有效登录：' + auth.detail,
+    '去登录',
+    '查看文档',
+  );
+  if (action === '去登录') {
+    await loginCli();
+  } else if (action === '查看文档') {
+    await vscode.env.openExternal(vscode.Uri.parse(CLI_DOC_URL));
+  }
+}
+
+interface ConnectionPick extends vscode.QuickPickItem {
+  mode: 'cli' | 'desktop' | 'ark';
+}
+
+/**
+ * 首次安装后（以及命令「豆包: 选择连接方式」）让用户选连接方式。
+ * 选完写 doubao.authMode，并立刻做一次可用性检查/引导。
+ */
+async function chooseConnectionMode(context: vscode.ExtensionContext, firstRun: boolean): Promise<void> {
+  const config = readConfig();
+  const [cliInfo, desktopOk] = await Promise.all([
+    detectCli(config.cliPath).catch(() => undefined),
+    probeDesktop(config.desktopPort)
+      .then((status) => status.ok)
+      .catch(() => false),
+  ]);
+  if (cliInfo) {
+    cliInfoCache = cliInfo;
+    refreshStatusBar();
+  }
+
+  const items: ConnectionPick[] = [
+    {
+      label: '$(terminal) 豆包 CLI（轻量 · 推荐）',
+      description: cliInfo?.installed ? '已安装 v' + (cliInfo.version ?? '') : '未安装，选择后引导安装',
+      detail:
+        'Agent、文件读写、终端、技能、子 Agent 都由官方 CLI 执行，扩展只做侧边栏界面；需要豆包团队/企业订阅。',
+      mode: 'cli',
+    },
+    {
+      label: '$(window) 豆包桌面版（免 API Key）',
+      description: desktopOk ? '调试端口已就绪' : '需要安装并以调试端口启动',
+      detail: '复用桌面版登录态，不需要 API Key；通过 CDP 驱动桌面窗口，可能抢占焦点。',
+      mode: 'desktop',
+    },
+    {
+      label: '$(key) 火山方舟 API Key',
+      description: config.apiKey ? '已配置 Key' : '需要配置 Key',
+      detail: '直接调用 Ark OpenAI 兼容接口，按 token 计费；行内补全也走它。',
+      mode: 'ark',
+    },
+  ];
+
+  const picked = await vscode.window.showQuickPick(items, {
+    title: firstRun ? '选择豆包的连接方式' : '切换豆包的连接方式',
+    placeHolder: '以后可用命令「豆包: 选择连接方式」随时切换',
+    ignoreFocusOut: true,
+  });
+  if (!picked) {
+    // 首次跳过不等于选好了：下次激活再问一次。
+    return;
+  }
+
+  await vscode.workspace.getConfiguration('doubao').update('authMode', picked.mode, vscode.ConfigurationTarget.Global);
+  await context.globalState.update(CONNECTION_MODE_KEY, true);
+  clearCliCache();
+  void refreshCliInfo();
+  chatProvider?.postState();
+  log('连接方式已选择', picked.mode);
+  await afterModeChosen(picked.mode);
+}
+
+/** 选完模式后的下一步：缺什么就补什么，不让用户自己猜。 */
+async function afterModeChosen(mode: 'cli' | 'desktop' | 'ark'): Promise<void> {
+  const config = readConfig();
+  if (mode === 'cli') {
+    const info = await detectCli(config.cliPath);
+    cliInfoCache = info;
+    refreshStatusBar();
+    if (!info.installed) {
+      const action = await vscode.window.showInformationMessage(
+        '已切到豆包 CLI 模式，但本机还没检测到 CLI。安装命令：' + CLI_INSTALL_COMMAND,
+        '安装说明',
+        '复制命令',
+      );
+      if (action === '安装说明') {
+        await openCliInstall();
+      } else if (action === '复制命令') {
+        await vscode.env.clipboard.writeText(CLI_INSTALL_COMMAND);
+      }
+      return;
+    }
+    const auth = await checkCliAuth(info);
+    if (!auth.loggedIn) {
+      const action = await vscode.window.showWarningMessage(
+        '豆包 CLI 已安装（v' + (info.version ?? '?') + '），但还没有有效登录。',
+        '去登录',
+        '稍后',
+      );
+      if (action === '去登录') {
+        await loginCli();
+      }
+      return;
+    }
+    vscode.window.showInformationMessage('已切到豆包 CLI 模式（v' + (info.version ?? '?') + '，登录有效）。');
+    return;
+  }
+
+  if (mode === 'desktop') {
+    const status = await probeDesktop(config.desktopPort);
+    if (!status.ok) {
+      const action = await vscode.window.showWarningMessage(
+        '已切到豆包桌面版模式，但连接还没就绪：' + (status.error ?? '未知原因'),
+        '以调试端口启动',
+        '稍后',
+      );
+      if (action === '以调试端口启动') {
+        await vscode.commands.executeCommand('doubao.launchDesktop');
+      }
+    }
+    return;
+  }
+
+  if (!config.apiKey) {
+    const action = await vscode.window.showInformationMessage('已切到 Ark API Key 模式，还需要配置 Key。', '设置 API Key');
+    if (action === '设置 API Key') {
+      await vscode.commands.executeCommand('doubao.setApiKey');
+    }
+  }
+}
+
 export function deactivate(): void {
   log('扩展停用', `运行 ${uptimeSeconds()}s`);
   void mcpManager?.dispose();
@@ -628,12 +901,19 @@ function refreshStatusBar(): void {
     return;
   }
   const config = readConfig();
-  const configured = config.authMode === 'desktop' ? Boolean(config.desktopExePath) : Boolean(config.apiKey);
+  const configured =
+    config.authMode === 'cli'
+      ? Boolean(cliInfoCache?.installed)
+      : config.authMode === 'desktop'
+        ? Boolean(config.desktopExePath)
+        : Boolean(config.apiKey);
   statusBar.text = configured ? '$(sparkle) 豆包' : '$(sparkle) 豆包 (未配置)';
   const keyLine =
-    config.authMode === 'desktop'
-      ? `接入方式：桌面端登录态（端口 ${config.desktopPort}，无需 API Key）`
-      : `API Key：${config.apiKey ? `已配置（${SOURCE_LABEL[config.apiKeySource] ?? config.apiKeySource}）` : '未配置'}`;
+    config.authMode === 'cli'
+      ? `接入方式：豆包 CLI（${cliInfoCache?.installed ? 'v' + cliInfoCache.version : '未检测到'}）`
+      : config.authMode === 'desktop'
+        ? `接入方式：桌面端登录态（端口 ${config.desktopPort}，无需 API Key）`
+        : `API Key：${config.apiKey ? `已配置（${SOURCE_LABEL[config.apiKeySource] ?? config.apiKeySource}）` : '未配置'}`;
   statusBar.tooltip = [
     '豆包编程助手',
     `模型：${config.model}`,

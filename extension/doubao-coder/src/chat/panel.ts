@@ -36,6 +36,8 @@ import { parseMarkdownBlocks } from './ast';
 import { SessionStore, newSessionId } from './sessions';
 import { listDesktopConversations, openDesktopConversation, readDesktopConversation } from '../bridge/desktop-history';
 import { collectAllDesktopConversations, openDesktopConversationById } from '../bridge/desktop-history-all';
+import { CLI_DOC_URL, CLI_INSTALL_COMMAND, isResumeRejected, runCliTask, statusLine } from '../cli/runner';
+import { detectCli } from '../cli/detect';
 
 /** Webview → 扩展 的消息。 */
 interface IncomingMessage {
@@ -108,7 +110,7 @@ type OutgoingMessage =
       turns: number;
       mode: 'chat' | 'local';
       permission: 'ask' | 'risk' | 'allow';
-      authMode: 'desktop' | 'ark';
+      authMode: 'cli' | 'desktop' | 'ark';
       project: string;
       mcpTools: number;
       rules: boolean;
@@ -218,6 +220,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   private acceptedStack: Array<{ path: string; before: string }> = [];
   /** 最近一次构建/测试输出，用于「问豆包修这个」。 */
   private lastVerify: { kind: VerifyKind; command: string; output: string } | undefined;
+  /** CLI 模式：当前标签续接的 CLI 会话 ID（由 CLI 输出里捕获，失败则新开会话）。 */
+  private cliSessionId: string | undefined;
+  /** CLI 环境提示每个面板只发一次，避免每次打开侧边栏都刷屏。 */
+  private cliSetupPosted = false;
   private lastPasteAt = 0;
   private assistantBuf = '';
 
@@ -320,6 +326,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     this.history = [];
     this.localMode = kind === 'task';
     this.forceNewChat = false;
+    this.cliSessionId = undefined;
     this.post({ type: 'clear' });
     await this.updateConfig('chat.mode', kind === 'task' ? 'local' : 'chat');
     this.postState();
@@ -618,6 +625,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     if (config.authMode === 'ark' && !(await ensureConfigured(config))) {
       const validation = validateConfig(config);
       this.post({ type: 'error', message: validation.problems.join('\n') });
+      return;
+    }
+
+    // CLI 模式：工具/权限/技能/子 Agent 全部由官方 CLI 执行，扩展只做界面；
+    // 对话与「本地电脑」在 CLI 侧没有区别，统一交给 doubao -p。
+    if (config.authMode === 'cli') {
+      await this.runCli(config, withAttachments);
       return;
     }
 
@@ -1584,6 +1598,135 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     return answer === '允许';
   }
 
+  /**
+   * CLI 通道：doubao -C <workspace> --permission-mode <mode> -p "<prompt>"。
+   *
+   * 为什么不在这里再实现一套 Agent：CLI 已经带工具、权限、技能、子 Agent，
+   * 还会读取 AGENTS.md 与本地 Skills 目录；扩展重复实现只会得到两套不一致的
+   * 权限模型和两份维护成本。这里只负责起进程、显示结果、支持中断。
+   */
+  private async runCli(config: DoubaoConfig, userContent: string): Promise<void> {
+    const controller = new AbortController();
+    this.abortController = controller;
+    this.running = true;
+    this.postState();
+
+    try {
+      const info = await detectCli(config.cliPath);
+      if (!info.installed || !info.binary) {
+        this.post({ type: 'assistant_done', aborted: true, at: Date.now() });
+        const message = info.error || '没有找到豆包 CLI。请先安装：' + CLI_INSTALL_COMMAND;
+        this.post({ type: 'error', message });
+        const action = await vscode.window.showErrorMessage(message, '查看安装文档', '打开设置');
+        if (action === '查看安装文档') {
+          await vscode.env.openExternal(vscode.Uri.parse(CLI_DOC_URL));
+        } else if (action === '打开设置') {
+          await vscode.commands.executeCommand('doubao.openSettings');
+        }
+        return;
+      }
+
+      const cwd = workspaceRoot() || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+      this.post({
+        type: 'notice',
+        text:
+          '已交给本机豆包 CLI 执行' +
+          (info.version ? '（v' + info.version + '）' : '') +
+          '，工具调用与权限确认由 CLI 负责。',
+      });
+
+      let lastStatus = '';
+      let lastStatusAt = 0;
+      const onStderrChunk = (chunk: string): void => {
+        const line = statusLine(chunk);
+        if (!line || line === lastStatus || Date.now() - lastStatusAt < 700) {
+          return;
+        }
+        lastStatus = line;
+        lastStatusAt = Date.now();
+        this.post({ type: 'generating', text: line });
+      };
+
+      const runOnce = (resumeId: string | undefined): Promise<import('../cli/runner').CliTaskResult> =>
+        runCliTask({
+          binary: info.binary as string,
+          prompt: userContent,
+          cwd,
+          permissionMode: config.cliPermissionMode,
+          model: config.cliModel,
+          effort: config.cliEffort || undefined,
+          resumeId,
+          timeoutMs: config.cliTimeoutMs,
+          signal: controller.signal,
+          onStderrChunk,
+        });
+
+      const started = Date.now();
+      let result = await runOnce(this.cliSessionId);
+      if (!result.ok && this.cliSessionId && isResumeRejected(result.stderr)) {
+        this.cliSessionId = undefined;
+        this.post({ type: 'notice', text: 'CLI 会话已失效，改为新会话重试…' });
+        result = await runOnce(undefined);
+      }
+      if (result.sessionId) {
+        this.cliSessionId = result.sessionId;
+      }
+
+      if (result.aborted) {
+        this.post({ type: 'assistant_done', aborted: true, at: Date.now() });
+        return;
+      }
+      if (result.timedOut) {
+        this.post({
+          type: 'error',
+          message:
+            '豆包 CLI 执行超时（' +
+            Math.round(config.cliTimeoutMs / 1000) +
+            's），可在设置里调大 doubao.cli.timeoutMs。',
+        });
+        this.post({ type: 'assistant_done', aborted: true, at: Date.now() });
+        return;
+      }
+      if (!result.ok) {
+        const detail = statusLine(result.stderr, 500) || result.error || '退出码 ' + result.code;
+        const hint = /未登录|登录|login|auth|401|unauthorized/i.test(result.stderr + ' ' + detail)
+          ? '\n\nCLI 可能还没登录：执行「豆包: 登录 CLI」扫码后再试。'
+          : '';
+        this.post({ type: 'error', message: '豆包 CLI 执行失败：' + detail + hint });
+        this.post({ type: 'assistant_done', aborted: true, at: Date.now() });
+        return;
+      }
+
+      const text = result.text;
+      if (!text) {
+        this.post({ type: 'notice', text: '豆包 CLI 没有输出文本（任务可能已完成，可到终端里查看 CLI 日志）。' });
+      } else {
+        this.assistantBuf += text;
+        this.post({ type: 'assistant_delta', text });
+        this.post({ type: 'ast', blocks: this.localizeBlocks(parseMarkdownBlocks(this.assistantBuf)) });
+      }
+      this.post({
+        type: 'notice',
+        text: '豆包 CLI 已完成，用时 ' + Math.max(1, Math.round((Date.now() - started) / 1000)) + 's',
+      });
+      this.post({ type: 'assistant_done', aborted: false, at: Date.now() });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logErrorLevel('CLI 通道失败', err);
+      this.post({ type: 'error', message: '豆包 CLI 调用失败：' + message });
+      this.post({ type: 'assistant_done', aborted: true, at: Date.now() });
+    } finally {
+      this.running = false;
+      this.abortController = undefined;
+      this.persistTurn();
+      this.postSources(this.assistantBuf);
+      if (!this.disposed) {
+        this.postState();
+      }
+      this.drainQueuedUser();
+    }
+  }
+
   private async runDesktop(config: DoubaoConfig, userContent: string): Promise<void> {
     // 先把桌面端模式/模型对齐，再拼提示词：保证「当前模型：…」和工具栏显示的是同一个。
     const desktopMode = this.desktopModeFor(config);
@@ -2113,6 +2256,24 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   /** 推送「安装 / 登录 / 启动」检查结果给界面。 */
   private async pushSetup(): Promise<void> {
     const config = readConfig();
+    if (config.authMode === 'cli') {
+      if (this.cliSetupPosted) {
+        return;
+      }
+      this.cliSetupPosted = true;
+      void detectCli(config.cliPath).then((info) => {
+        if (this.disposed) {
+          return;
+        }
+        this.post({
+          type: 'notice',
+          text: info.installed
+            ? '豆包 CLI 已就绪' + (info.version ? '（v' + info.version + '）' : '') + '，任务会交给 CLI 执行。'
+            : '未检测到豆包 CLI：执行「豆包: 选择连接方式」按提示安装并登录。',
+        });
+      });
+      return;
+    }
     if (config.authMode !== 'desktop') {
       return;
     }
@@ -2428,6 +2589,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     this.sessionId = record.id;
+    this.cliSessionId = undefined;
     this.history = [];
     // 本地会话如果对应豆包里的某个对话，切回去并绑定，避免接着发到别的任务
     this.setActiveTarget(localTarget(record.id, record.desktopTitle || '', record.desktopId || ''));
@@ -3086,13 +3248,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     const config = readConfig();
     const localModel = this.taskModel || config.desktopModel || 'DeepSeek V4.1 Flash';
     const localReasoning = this.taskReasoning || config.desktopReasoning || '';
-    const model = config.authMode === 'desktop'
-      ? this.localMode
-        ? `${localModel}${localReasoning ? ` · ${localReasoning}` : ''}`
-        : this.desktopModel === '专家'
-          ? '专家'
-          : '快速'
-      : config.model;
+    const model = config.authMode === 'cli'
+      ? (config.cliModel || 'Auto') + (config.cliEffort ? ' · ' + config.cliEffort : '')
+      : config.authMode === 'desktop'
+        ? this.localMode
+          ? `${localModel}${localReasoning ? ` · ${localReasoning}` : ''}`
+          : this.desktopModel === '专家'
+            ? '专家'
+            : '快速'
+        : config.model;
     this.post({
       type: 'state',
       busy: this.running,

@@ -17,14 +17,14 @@ export interface EffectiveModelInput {
   /** 配置里的桌面端模型（用户上次选中的默认值） */
   configDesktopModel?: string;
   configDesktopReasoning?: string;
-  /** Ark 模型（只在非桌面端通道使用） */
+  /** Ark / CLI 模型（只在非桌面端通道使用） */
   configModel?: string;
-  authMode?: 'desktop' | 'ark';
+  authMode?: 'cli' | 'desktop' | 'ark';
 }
 
 /** 当前生效的模型与推理强度（桌面端优先，Ark 兜底）。 */
 export function pickEffectiveModel(input: EffectiveModelInput): { model: string; reasoning: string } {
-  if (input.authMode === 'ark') {
+  if (input.authMode === 'ark' || input.authMode === 'cli') {
     return { model: String(input.configModel || '').trim() || '未指定', reasoning: '' };
   }
   if (input.mode === 'chat') {

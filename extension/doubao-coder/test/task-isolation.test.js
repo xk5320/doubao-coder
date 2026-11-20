@@ -108,5 +108,9 @@ check('多根工作区：scope 覆盖所有根目录', panel.includes('folders.j
 check('任务中心：后台任务状态推送', panel.includes('postTasks') && panel.includes('startBackgroundTask'));
 check('来源面板：收集文件引用', panel.includes('postSources') && fs.readFileSync(path.join(root, 'media', 'chat.js'), 'utf8').includes('renderSources'));
 
+check('发布：CI workflow 存在', fs.existsSync(path.join(root, '..', '..', '.github', 'workflows', 'ci.yml')));
+check('发布：Release workflow 存在', fs.existsSync(path.join(root, '..', '..', '.github', 'workflows', 'release.yml')));
+check('MCP 模板：命令已注册', JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).contributes.commands.some(function (c) { return c.command === 'doubao.addMcpTemplate'; }));
+
 console.log('\n结果：PASS ' + pass + '，FAIL ' + fail);
 process.exit(fail ? 1 : 0);
