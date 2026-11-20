@@ -72,8 +72,8 @@ function isFile(candidate: string): boolean {
 
 function appDataRoot(env: NodeJS.ProcessEnv, platform: NodeJS.Platform): string | undefined {
   if (platform === 'win32') {
-    const local = env.LOCALAPPDATA;
-    return local ? path.join(local, 'doubao_cli', 'app', 'current') : undefined;
+    const local = env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+    return path.join(local, 'doubao_cli', 'app', 'current');
   }
   if (platform === 'darwin') {
     return path.join(os.homedir(), 'Library', 'Application Support', 'doubao_cli', 'app', 'current');

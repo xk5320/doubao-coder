@@ -509,6 +509,36 @@ class DomElement {
     this.setAttribute('id', value);
   }
 
+  get dataset() {
+    const el = this;
+    const initial = {};
+    for (const [name] of this._attrs) {
+      if (!name.startsWith('data-')) {
+        continue;
+      }
+      const key = name.slice(5).replace(/-([a-z])/g, function (_match, ch) {
+        return ch.toUpperCase();
+      });
+      initial[key] = this._attrs.get(name);
+    }
+    return new Proxy(initial, {
+      get(target, prop) {
+        return target[prop];
+      },
+      set(target, prop, value) {
+        const name = 'data-' + String(prop).replace(/[A-Z]/g, function (ch) {
+          return '-' + ch.toLowerCase();
+        });
+        el.setAttribute(name, value);
+        target[prop] = String(value);
+        return true;
+      },
+      has(target, prop) {
+        return prop in target;
+      },
+    });
+  }
+
   get className() {
     return Array.from(this._classes).join(' ');
   }

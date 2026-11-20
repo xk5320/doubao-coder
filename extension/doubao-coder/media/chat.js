@@ -1766,10 +1766,15 @@ let historyLoadingText = '';
     currentModel = state.model || '未配置模型';
     currentReasoning = state.reasoning || '';
     const model = currentModel;
-    metaEl.textContent =
-      model +
-      (state.authMode === 'desktop' ? ' · 桌面端免 Key' : state.apiKeyConfigured ? (state.apiKeySource === 'env' ? ' · 环境变量 Key' : '') : ' · 未配置 API Key') +
-      (state.version ? ' · v' + state.version : '');
+    const authLabel =
+      state.authMode === 'desktop'
+        ? ' · 桌面端免 Key'
+        : state.authMode === 'cli'
+          ? ' · 豆包 CLI'
+          : state.apiKeyConfigured
+            ? (state.apiKeySource === 'env' ? ' · 环境变量 Key' : '')
+            : ' · 未配置 API Key';
+    metaEl.textContent = model + authLabel + (state.version ? ' · v' + state.version : '');
     statusEl.textContent = busy
       ? (local ? '本地电脑执行中…' : '生成中…')
       : state.turns

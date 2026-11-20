@@ -29,7 +29,9 @@
 
 | 功能 | 说明 |
 | --- | --- |
-| **桌面端免 Key 模式（默认）** | 直接驱动你**已登录**的豆包桌面端：扩展通过 CDP（`--remote-debugging-port=9222`）把问题写进输入框、点发送、流式读回回复并还原 Markdown。登录态/签名/风控全部由官方客户端完成，**不需要 API Key** |
+| **本机豆包 CLI（轻量，推荐）** | 调用已登录的官方 `doubao -p`：文件读写、终端、技能、子 Agent、权限策略全由 CLI 执行，扩展只做侧边栏界面；安装后首次激活三选一（CLI / 桌面版 / Ark），可随时切换。需要 Node 18+ 与豆包团队/企业订阅 |
+| **设置中心** | 命令「豆包: 设置中心」或侧边栏标题齿轮：集中切换连接方式、检查登录/连接、修改 CLI/桌面/Ark 与通用配置；所有改动即时生效 |
+| **桌面端免 Key 模式** | 直接驱动你**已登录**的豆包桌面端：扩展通过 CDP（`--remote-debugging-port=9222`）把问题写进输入框、点发送、流式读回回复并还原 Markdown。登录态/签名/风控全部由官方客户端完成，**不需要 API Key** |
 | **PTC 工具调用（默认开）** | 桌面端通道只有纯文本，所以用 **PTC（Programmatic Tool Calling）**：模型输出 ` ```tool ` 代码块 → 扩展解析执行 8 个内置工具（外加任意 MCP 工具）→ 把 `<tool_result>` 发回同一会话。免 Key 也能读写工作区 |
 | 侧边栏对话 | 活动栏「豆包编程助手」图标 → 「豆包对话」Webview，流式输出、Markdown 渲染、代码块「复制 / 插入」按钮 |
 | Agent 工具调用 | 模型可调用 8 个内置工具：`read_file` `list_dir` `grep` `write_file` `apply_patch` `run_terminal` `run_checks` `get_diagnostics`，多轮自主执行（最多 `doubao.maxToolIterations` 轮） |
@@ -61,6 +63,8 @@ doubao-coder/
 ├─ media/
 │  ├─ chat.css                  # 侧边栏样式（全部走 VS Code 主题变量）
 │  ├─ chat.js                   # 原生 JS 前端：流式渲染 / 极简 Markdown / 代码块按钮
+│  ├─ settings.css              # 设置中心样式
+│  ├─ settings.js               # 设置中心前端：连接方式 / 登录 / 常用配置
 │  ├─ doubao-icon.png           # 扩展图标（128×128，取自豆包桌面端 icon.ico）
 │  └─ doubao-activity.png       # 活动栏图标（48×48，同一来源）
 └─ src/
@@ -76,6 +80,10 @@ doubao-coder/
    │  ├─ panel.ts               # WebviewViewProvider + 消息协议 + CSP(nonce)
    │  └─ prompt.ts              # 系统提示词、@上下文拼装、规则文件、行内改写提示词
    ├─ completion/provider.ts    # InlineCompletionItemProvider（防抖/取消/缓存/上下文裁剪）
+   ├─ cli/runner.ts             # 豆包 CLI 调用：参数拼装 / 输出清理 / 超时中断 / 会话 ID
+   ├─ cli/detect.ts             # CLI 探测：可执行文件 / 版本 / 登录态
+   ├─ settings/panel.ts         # 设置中心 Webview（连接 / 登录 / 常用配置）
+   ├─ settings/schema.ts        # 设置白名单 + 枚举/范围校验
    ├─ inline/edit.ts            # 行内改写：选区→指令→Ark→diff 预览→应用；撤销
    ├─ doubao/bridge.ts          # deep link 构造与 openExternal
    ├─ mcp/server.ts             # 独立 MCP stdio server（不依赖 vscode 模块）
@@ -89,6 +97,7 @@ doubao-coder/
 - VS Code ≥ 1.90.0
 - **桌面端模式**：本机安装豆包桌面端（默认路径 `%LOCALAPPDATA%\Doubao\Application\app\Doubao.exe`），
   并能接受"以调试端口启动"（会抢焦点、回复会写进你的豆包会话）
+- **CLI 模式**：Node.js 18+，已安装并登录豆包 CLI（团队/企业订阅），见 [豆包 CLI 文档](https://www.doubao.com/work/docs/zh-cn/doubao-cli)
 - **Ark 模式**：一个可用的火山方舟 Ark API Key
 
 ## 4. 构建
@@ -126,7 +135,12 @@ npx --yes @vscode/vsce package
 
 | 配置 | 默认值 | 说明 |
 | --- | --- | --- |
-| `doubao.authMode` | `desktop` | `desktop`=驱动已登录的桌面端（免 Key）；`ark`=官方 API（需 Key） |
+| `doubao.authMode` | `desktop` | `cli`=本机豆包 CLI（轻量，Agent 由 CLI 执行）；`desktop`=驱动已登录的桌面端（免 Key）；`ark`=官方 API（需 Key） |
+| `doubao.cli.path` | 自动 | CLI 可执行文件；留空探测 `%LOCALAPPDATA%\doubao_cli\app\current\doubao.exe` 与 PATH |
+| `doubao.cli.permissionMode` | `ask_risky` | 传给 `--permission-mode`：`ask_always` / `ask_risky` / `always_allow` |
+| `doubao.cli.model` | 空 | 传给 `--model`；空=Auto |
+| `doubao.cli.effort` | 空 | `Low` / `Medium` / `High`；空=不传 |
+| `doubao.cli.timeoutMs` | `600000` | 单次 CLI 任务超时（毫秒） |
 | `doubao.desktop.port` | `9222` | 桌面端 CDP 调试端口 |
 | `doubao.desktop.exePath` | 自动 | 豆包可执行文件路径（留空按 `%LOCALAPPDATA%` 推导） |
 | `doubao.desktop.newChat` | `false` | 每次提问前是否在豆包里新开对话 |
@@ -172,6 +186,13 @@ npx --yes @vscode/vsce package
 | `doubao.indexWorkspace` | 统计工作区文件数 | |
 | `doubao.runChecks` | 运行工程检查（编译 / lint / 测试） | |
 | `doubao.mcpStatus` | 查看 MCP 连接状态 | |
+| `doubao.selectConnectionMode` | 选择连接方式（CLI / 桌面版 / API Key） | |
+| `doubao.cliLogin` | 登录豆包 CLI | |
+| `doubao.cliCheck` | 检查 CLI 安装与登录 | |
+| `doubao.cliInstall` | 查看 CLI 安装方式 | |
+| `doubao.cliOpenTerminal` | 在终端打开 CLI（交互模式） | |
+| `doubao.cliStartService` | 启动 CLI 后台服务（远程派发） | |
+| `doubao.openSettingsPanel` | 设置中心（连接 / 登录 / 常用配置） | 侧边栏标题齿轮 |
 
 ## 8. MCP stdio server
 
@@ -277,3 +298,37 @@ node out/mcp/server.js
 10. **图片链接是桌面端 CDN 的签名 URL**：扩展只负责解析和显示，不把图片保存到工作区；签名过期或断网时图片会显示失败，可点「打开原图」或让豆包重新发送。
 11. **云电脑 / AMD-PC / HUAWEI 等远程工作模式没有镜像**：这些依赖豆包桌面端的远程执行面，扩展只对接「工作任务 · 本地电脑」；本地工具链与文件路径只在本机可用。
 12. **桌面端模型列表取决于账号/版本**：`DeepSeek V4.1 Flash`、推理强度这些选项来自豆包桌面端当前菜单；如果账号没有该模型，自动对齐会失败并保留桌面端当前选择（日志会写明原因）。桌面端大版本更新后菜单结构变化，需要重新核对 `src/bridge/desktop-control.ts` 的选择器。
+13. **CLI 模式不做流式**：`doubao -p` 的输出在结束时一次性显示，过程状态来自 stderr（若当前 CLI 版本不写 stderr，界面只显示「执行中」）。
+14. **CLI 权限确认不在侧边栏**：非交互模式无法在 UI 里点授权；`ask_always` 可能被 CLI 拒绝，无人值守建议 `always_allow`（注意风险）。
+15. **CLI 会话续接是启发式**：从输出里捕获 session id，捕获不到时每轮新会话；后续可解析 `doubao --list`。
+
+## 13. 连接方式怎么选（CLI / 桌面版 / Ark）
+
+| 你的情况 | 建议 |
+| --- | --- |
+| 有豆包团队/企业订阅，想最稳、跨平台、不抢焦点 | **本机豆包 CLI** |
+| 没有订阅，但装了豆包桌面版并已登录 | **桌面版（免 Key）** |
+| 需要行内补全，或想按 token 计费接进自己的 Key | **Ark API Key** |
+
+首次安装后第一次激活会弹「选择豆包的连接方式」；已经设置过 `doubao.authMode` 的老用户不会被打断。
+之后随时可以执行命令 **豆包: 选择连接方式** 切换；更细的登录与常用配置在 **豆包: 设置中心**（侧边栏标题齿轮）里。
+
+### CLI 模式怎么开始
+
+1. 安装 Node.js 18+，然后：
+   ```powershell
+   npm install -g '@bytedance/doubao-cli' --registry=https://registry.npmjs.org/
+   doubao --version
+   ```
+2. 登录并校验：
+   ```powershell
+   doubao login
+   doubao auth status --verify
+   ```
+3. 命令面板执行 **豆包: 选择连接方式** → 选「豆包 CLI（轻量 · 推荐）」。
+4. 侧边栏发任务；扩展实际执行 `doubao -C <工作区> --permission-mode ask_risky -p "<任务>"`。
+
+补充入口：**豆包: 在终端打开 CLI** 直接进官方 TUI（多轮、`/resume`、定时任务）；
+**豆包: 启动 CLI 后台服务** 运行 `doubao --service-start`，让手机/其他设备通过同一账号给这台机器派任务。
+
+> 详细分析（为什么不做第二套 Agent、限制与后续）见 [docs/14-轻量连接豆包CLI.md](docs/14-轻量连接豆包CLI.md)。

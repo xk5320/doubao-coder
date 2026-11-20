@@ -222,6 +222,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   private lastVerify: { kind: VerifyKind; command: string; output: string } | undefined;
   /** CLI 模式：当前标签续接的 CLI 会话 ID（由 CLI 输出里捕获，失败则新开会话）。 */
   private cliSessionId: string | undefined;
+  /** CLI 模式：最近几轮对话，仅在拿不到会话 ID 时作为降级上下文发给 CLI。 */
+  private cliHistory: Array<{ role: 'user' | 'assistant'; text: string }> = [];
   /** CLI 环境提示每个面板只发一次，避免每次打开侧边栏都刷屏。 */
   private cliSetupPosted = false;
   private lastPasteAt = 0;
@@ -327,6 +329,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     this.localMode = kind === 'task';
     this.forceNewChat = false;
     this.cliSessionId = undefined;
+    this.cliHistory = [];
     this.post({ type: 'clear' });
     await this.updateConfig('chat.mode', kind === 'task' ? 'local' : 'chat');
     this.postState();
@@ -1647,10 +1650,21 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         this.post({ type: 'generating', text: line });
       };
 
+      const promptFor = (resumeId: string | undefined): string => {
+        if (resumeId || this.cliHistory.length === 0) {
+          return userContent;
+        }
+        const recent = this.cliHistory
+          .slice(-6)
+          .map((item) => (item.role === 'user' ? '用户：' : '豆包：') + item.text.trim().slice(0, 1500))
+          .join('\n');
+        return '以下是同一会话此前的对话，供参考：\n' + recent + '\n\n本轮请求：\n' + userContent;
+      };
+
       const runOnce = (resumeId: string | undefined): Promise<import('../cli/runner').CliTaskResult> =>
         runCliTask({
           binary: info.binary as string,
-          prompt: userContent,
+          prompt: promptFor(resumeId),
           cwd,
           permissionMode: config.cliPermissionMode,
           model: config.cliModel,
@@ -1704,6 +1718,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         this.assistantBuf += text;
         this.post({ type: 'assistant_delta', text });
         this.post({ type: 'ast', blocks: this.localizeBlocks(parseMarkdownBlocks(this.assistantBuf)) });
+        this.cliHistory.push({ role: 'user', text: userContent }, { role: 'assistant', text });
+        if (this.cliHistory.length > 8) {
+          this.cliHistory = this.cliHistory.slice(-8);
+        }
       }
       this.post({
         type: 'notice',
@@ -2261,17 +2279,19 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         return;
       }
       this.cliSetupPosted = true;
-      void detectCli(config.cliPath).then((info) => {
-        if (this.disposed) {
-          return;
-        }
-        this.post({
-          type: 'notice',
-          text: info.installed
-            ? '豆包 CLI 已就绪' + (info.version ? '（v' + info.version + '）' : '') + '，任务会交给 CLI 执行。'
-            : '未检测到豆包 CLI：执行「豆包: 选择连接方式」按提示安装并登录。',
-        });
-      });
+      void detectCli(config.cliPath)
+        .then((info) => {
+          if (this.disposed) {
+            return;
+          }
+          this.post({
+            type: 'notice',
+            text: info.installed
+              ? '豆包 CLI 已就绪' + (info.version ? '（v' + info.version + '）' : '') + '，任务会交给 CLI 执行。'
+              : '未检测到豆包 CLI：执行「豆包: 选择连接方式」按提示安装并登录。',
+          });
+        })
+        .catch(() => undefined);
       return;
     }
     if (config.authMode !== 'desktop') {
@@ -2590,6 +2610,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     }
     this.sessionId = record.id;
     this.cliSessionId = undefined;
+    this.cliHistory = [];
     this.history = [];
     // 本地会话如果对应豆包里的某个对话，切回去并绑定，避免接着发到别的任务
     this.setActiveTarget(localTarget(record.id, record.desktopTitle || '', record.desktopId || ''));

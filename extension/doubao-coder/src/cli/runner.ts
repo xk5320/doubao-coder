@@ -262,6 +262,17 @@ export function runCliTask(options: CliTaskOptions): Promise<CliTaskResult> {
       }
       if (!forceKill) {
         forceKill = setTimeout(() => {
+          // Windows 上升级为整棵进程树，避免 CLI 派生的子进程残留。
+          if (process.platform === 'win32' && child.pid && !options.spawnImpl) {
+            try {
+              spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], {
+                stdio: 'ignore',
+                windowsHide: true,
+              }).unref();
+            } catch {
+              /* ignore */
+            }
+          }
           try {
             child.kill('SIGKILL');
           } catch {

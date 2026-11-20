@@ -22,6 +22,7 @@ import { McpManager } from './mcp/manager';
 import { MCP_TEMPLATES, mergeMcpTemplate } from './mcp/templates';
 import { detectChecks, formatCheckReport, runChecks } from './agent/checks';
 import { checkCliAuth, clearCliCache, cliLoginArgs, detectCli, type CliInfo } from './cli/detect';
+import { disposeSettingsPanel, openSettingsPanel } from './settings/panel';
 import { CLI_DOC_URL, CLI_INSTALL_COMMAND } from './cli/runner';
 
 let chatProvider: ChatViewProvider | undefined;
@@ -198,7 +199,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   statusBar.show();
   context.subscriptions.push(statusBar);
   refreshStatusBar();
-  void refreshCliInfo();
+  if (readConfig().authMode === 'cli') {
+    void refreshCliInfo();
+  }
 
   // 首次安装后只问一次：轻量 CLI / 豆包桌面版 / Ark API Key。
   // 已经显式设置过 doubao.authMode 的老用户不打断，只补记标记。
@@ -323,7 +326,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     vscode.commands.registerCommand('doubao.selectConnectionMode', async () => {
       log('命令：选择连接方式');
-      await chooseConnectionMode(context, false);
+      openSettingsPanel(context);
+    }),
+
+    vscode.commands.registerCommand('doubao.openSettingsPanel', async () => {
+      log('命令：打开设置中心');
+      openSettingsPanel(context);
+    }),
+
+    // 内部命令：设置中心检查完 CLI 后，让状态栏复用最新结果。
+    vscode.commands.registerCommand('doubao.internal.refreshCli', async () => {
+      await refreshCliInfo();
+      chatProvider?.postState();
     }),
 
     vscode.commands.registerCommand('doubao.cliLogin', async () => {
@@ -339,6 +353,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('doubao.cliInstall', async () => {
       log('命令：安装豆包 CLI');
       await openCliInstall();
+    }),
+
+    vscode.commands.registerCommand('doubao.cliOpenTerminal', async () => {
+      log('命令：在终端打开豆包 CLI');
+      await openCliTerminal();
+    }),
+
+    vscode.commands.registerCommand('doubao.cliStartService', async () => {
+      log('命令：启动豆包 CLI 后台服务');
+      await startCliService();
     }),
 
     vscode.commands.registerCommand('doubao.undoAcceptedEdit', async () => {
@@ -623,11 +647,25 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   // ---------- 配置变化 ----------
+  let lastKnownAuthMode = readConfig().authMode;
+  let lastKnownCliPath = readConfig().cliPath;
   context.subscriptions.push(
     watchConfig(() => {
+      const nextConfig = readConfig();
+      if (nextConfig.cliPath !== lastKnownCliPath) {
+        lastKnownCliPath = nextConfig.cliPath;
+        void refreshCliInfo();
+      }
+      // 设置中心/首次选择切换通道后，状态栏的 CLI 探测结果要跟着刷新。
+      if (nextConfig.authMode !== lastKnownAuthMode) {
+        lastKnownAuthMode = nextConfig.authMode;
+        if (nextConfig.authMode === 'cli') {
+          void refreshCliInfo();
+        }
+      }
       refreshStatusBar();
       provider.postState();
-      void mcpManager?.reload(readConfig().mcpServers);
+      void mcpManager?.reload(nextConfig.mcpServers);
     }),
   );
 
@@ -748,7 +786,10 @@ async function checkCli(): Promise<void> {
     await openCliInstall();
     return;
   }
-  const auth = await checkCliAuth(info);
+  const auth = await vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Notification, title: '正在验证豆包 CLI 登录状态…' },
+    () => checkCliAuth(info),
+  );
   if (auth.loggedIn) {
     vscode.window.showInformationMessage('豆包 CLI 可用：v' + (info.version ?? '?') + '，登录有效。');
     return;
@@ -765,8 +806,53 @@ async function checkCli(): Promise<void> {
   }
 }
 
+
+/** 在集成终端里打开交互模式（多轮对话、/resume、定时任务都在这里）。 */
+async function openCliTerminal(): Promise<void> {
+  const config = readConfig();
+  const info = await detectCli(config.cliPath);
+  cliInfoCache = info;
+  refreshStatusBar();
+  if (!info.installed || !info.binary) {
+    await openCliInstall();
+    return;
+  }
+  const cwd = workspaceRoot() || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  const terminal = vscode.window.createTerminal({
+    name: '豆包 CLI',
+    shellPath: info.binary,
+    cwd,
+  });
+  terminal.show();
+  log('已打开豆包 CLI 交互终端', info.binary, cwd ?? '');
+}
+
+/** 以前台方式启动 CLI 后台服务，让手机/其他设备通过同一账号派发任务。 */
+async function startCliService(): Promise<void> {
+  const config = readConfig();
+  const info = await detectCli(config.cliPath);
+  cliInfoCache = info;
+  refreshStatusBar();
+  if (!info.installed || !info.binary) {
+    await openCliInstall();
+    return;
+  }
+  const cwd = workspaceRoot() || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  const terminal = vscode.window.createTerminal({
+    name: '豆包 CLI 服务',
+    shellPath: info.binary,
+    shellArgs: ['--service-start'],
+    cwd,
+  });
+  terminal.show();
+  vscode.window.showInformationMessage(
+    '已启动豆包 CLI 后台服务：同一设备只能开 1 个，关闭该终端即停止。其他设备登录同一豆包账号后可查看并派发任务。',
+  );
+  log('已启动豆包 CLI 后台服务', info.binary, cwd ?? '');
+}
+
 interface ConnectionPick extends vscode.QuickPickItem {
-  mode: 'cli' | 'desktop' | 'ark';
+  mode: 'cli' | 'desktop' | 'ark' | 'skip';
 }
 
 /**
@@ -807,6 +893,14 @@ async function chooseConnectionMode(context: vscode.ExtensionContext, firstRun: 
       mode: 'ark',
     },
   ];
+  if (firstRun) {
+    items.push({
+      label: '$(close) 暂不选择',
+      description: '继续用当前设置',
+      detail: '之后可随时在命令面板执行「豆包: 选择连接方式」。',
+      mode: 'skip',
+    });
+  }
 
   const picked = await vscode.window.showQuickPick(items, {
     title: firstRun ? '选择豆包的连接方式' : '切换豆包的连接方式',
@@ -814,7 +908,11 @@ async function chooseConnectionMode(context: vscode.ExtensionContext, firstRun: 
     ignoreFocusOut: true,
   });
   if (!picked) {
-    // 首次跳过不等于选好了：下次激活再问一次。
+    // 首次直接关掉不等于选好了：下次激活再问一次。
+    return;
+  }
+  if (picked.mode === 'skip') {
+    await context.globalState.update(CONNECTION_MODE_KEY, true);
     return;
   }
 
@@ -847,7 +945,10 @@ async function afterModeChosen(mode: 'cli' | 'desktop' | 'ark'): Promise<void> {
       }
       return;
     }
-    const auth = await checkCliAuth(info);
+    const auth = await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: '正在验证豆包 CLI 登录状态…' },
+      () => checkCliAuth(info),
+    );
     if (!auth.loggedIn) {
       const action = await vscode.window.showWarningMessage(
         '豆包 CLI 已安装（v' + (info.version ?? '?') + '），但还没有有效登录。',
@@ -892,6 +993,7 @@ export function deactivate(): void {
   mcpManager = undefined;
   chatProvider?.dispose();
   chatProvider = undefined;
+  disposeSettingsPanel();
   statusBar?.dispose();
   statusBar = undefined;
 }

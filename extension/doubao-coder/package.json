@@ -3,7 +3,7 @@
   "displayName": "豆包编程助手",
   "description": "第三方豆包编程助手：侧边栏 AI 对话、Agent 工具调用、行内补全、行内改写（Ctrl+Alt+I），并支持把选区投送到豆包桌面客户端。",
   "icon": "media/doubao-icon.png",
-  "version": "0.50.0",
+  "version": "0.52.0",
   "publisher": "doubao-coder",
   "author": "艾米尔",
   "contributors": [
@@ -67,7 +67,14 @@
     "onCommand:doubao.indexWorkspace",
     "onCommand:doubao.runChecks",
     "onCommand:doubao.mcpStatus",
-    "onCommand:doubao.applyNoWatermark"
+    "onCommand:doubao.applyNoWatermark",
+    "onCommand:doubao.selectConnectionMode",
+    "onCommand:doubao.openSettingsPanel",
+    "onCommand:doubao.cliLogin",
+    "onCommand:doubao.cliCheck",
+    "onCommand:doubao.cliInstall",
+    "onCommand:doubao.cliOpenTerminal",
+    "onCommand:doubao.cliStartService"
   ],
   "contributes": {
     "viewsContainers": {
@@ -242,6 +249,35 @@
       {
         "command": "doubao.addMcpTemplate",
         "title": "豆包：添加 MCP 模板"
+      },
+      {
+        "command": "doubao.selectConnectionMode",
+        "title": "豆包：选择连接方式（CLI / 桌面版 / API Key）"
+      },
+      {
+        "command": "doubao.openSettingsPanel",
+        "title": "豆包：设置中心（连接 / 登录 / 常用配置）",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "doubao.cliLogin",
+        "title": "豆包：登录 CLI"
+      },
+      {
+        "command": "doubao.cliCheck",
+        "title": "豆包：检查 CLI 安装与登录"
+      },
+      {
+        "command": "doubao.cliInstall",
+        "title": "豆包：查看 CLI 安装方式"
+      },
+      {
+        "command": "doubao.cliOpenTerminal",
+        "title": "豆包：在终端打开 CLI（交互模式）"
+      },
+      {
+        "command": "doubao.cliStartService",
+        "title": "豆包：启动 CLI 后台服务（远程派发）"
       }
     ],
     "menus": {
@@ -260,6 +296,11 @@
           "command": "doubao.showLogs",
           "when": "view == doubao.chatView",
           "group": "navigation@3"
+        },
+        {
+          "command": "doubao.openSettingsPanel",
+          "when": "view == doubao.chatView",
+          "group": "navigation@4"
         }
       ],
       "editor/context": [
@@ -339,15 +380,60 @@
         "doubao.authMode": {
           "type": "string",
           "enum": [
+            "cli",
             "desktop",
             "ark"
           ],
           "enumDescriptions": [
+            "轻量调用本机豆包 CLI：工具/技能/子 Agent 由官方 CLI 执行，扩展只做界面（需要团队/企业订阅与 CLI 登录）",
             "直连已登录的豆包桌面端（免 API Key，需以调试端口启动豆包）",
             "走火山方舟 OpenAI 兼容接口（需 API Key）"
           ],
           "default": "desktop",
-          "markdownDescription": "接入方式。`desktop`：复用桌面端登录态，不需要 API Key；`ark`：官方 API Key。"
+          "markdownDescription": "接入方式。`cli`：调用本机豆包 CLI，最稳最省资源，Agent 能力由 CLI 提供；`desktop`：复用桌面端登录态，不需要 API Key；`ark`：官方 API Key。安装后首次激活会弹一次选择，也可执行命令「豆包: 选择连接方式」。"
+        },
+        "doubao.cli.path": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "豆包 CLI 可执行文件路径。留空按 `%LOCALAPPDATA%\\doubao_cli\\app\\current\\doubao.exe`（macOS/Linux 为对应应用数据目录）和 `PATH` 自动探测。"
+        },
+        "doubao.cli.permissionMode": {
+          "type": "string",
+          "enum": [
+            "ask_always",
+            "ask_risky",
+            "always_allow"
+          ],
+          "enumDescriptions": [
+            "始终请求授权（非交互模式下可能被 CLI 拒绝）",
+            "风险操作时请求授权（与 CLI 默认一致）",
+            "允许所有操作（无人值守时使用，注意风险）"
+          ],
+          "default": "ask_risky",
+          "description": "传给 doubao --permission-mode 的权限策略。"
+        },
+        "doubao.cli.model": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "CLI 模型参数 `--model`。留空使用 CLI 的 Auto；可选值以当前 CLI 版本为准。"
+        },
+        "doubao.cli.effort": {
+          "type": "string",
+          "enum": [
+            "",
+            "Low",
+            "Medium",
+            "High"
+          ],
+          "default": "",
+          "description": "传给 doubao --effort 的推理强度；留空表示不指定。"
+        },
+        "doubao.cli.timeoutMs": {
+          "type": "number",
+          "default": 600000,
+          "minimum": 30000,
+          "maximum": 3600000,
+          "description": "单次 CLI 任务的超时时间（毫秒）。"
         },
         "doubao.desktop.port": {
           "type": "number",
@@ -667,7 +753,7 @@
     "compile": "tsc -p .",
     "watch": "tsc -watch -p .",
     "mcp": "node ./out/mcp/server.js",
-    "test": "node test/policy.test.js && node test/task.test.js && node test/ptc-parser.test.js && node test/md-extractor.test.js && node test/cu-core.test.js && node test/read-last.test.js && node test/mcp-client.test.js && node test/checks.test.js && node test/mcp-integration.test.js && node test/checks-tool.test.js && node test/tool-args.test.js && node test/path-boundary.test.js && node test/write-race.test.js && node test/terminal-timeout.test.js && node test/guard.test.js && node test/policy-bypass.test.js && node test/ws-overflow.test.js && node test/mcp-server-flush.test.js && node test/webview-mode.test.js && node test/ui-states.test.js && node test/blocks.test.js && node test/pick-page.test.js && node test/model-label.test.js && node test/activity.test.js && node test/step-style.test.js && node test/expand.test.js && node test/history-loading.test.js && node test/watermark.test.js && node test/history-running.test.js && node test/running-bar.test.js && node test/mode-switch.test.js && node test/local-images.test.js && node test/task-isolation.test.js && node test/active-target.test.js && node test/tabs.test.js && node test/diff.test.js && node test/desktop-errors.test.js && node test/mcp-templates.test.js && node test/parity.test.js",
+    "test": "node test/policy.test.js && node test/task.test.js && node test/ptc-parser.test.js && node test/md-extractor.test.js && node test/cu-core.test.js && node test/read-last.test.js && node test/mcp-client.test.js && node test/checks.test.js && node test/mcp-integration.test.js && node test/checks-tool.test.js && node test/tool-args.test.js && node test/path-boundary.test.js && node test/write-race.test.js && node test/terminal-timeout.test.js && node test/guard.test.js && node test/policy-bypass.test.js && node test/ws-overflow.test.js && node test/mcp-server-flush.test.js && node test/webview-mode.test.js && node test/ui-states.test.js && node test/blocks.test.js && node test/pick-page.test.js && node test/model-label.test.js && node test/activity.test.js && node test/step-style.test.js && node test/expand.test.js && node test/history-loading.test.js && node test/watermark.test.js && node test/history-running.test.js && node test/running-bar.test.js && node test/mode-switch.test.js && node test/local-images.test.js && node test/task-isolation.test.js && node test/active-target.test.js && node test/tabs.test.js && node test/diff.test.js && node test/desktop-errors.test.js && node test/mcp-templates.test.js && node test/settings.test.js && node test/settings-ui.test.js && node test/cli.test.js && node test/parity.test.js",
     "package": "npx --yes @vscode/vsce package"
   },
   "devDependencies": {
