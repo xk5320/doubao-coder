@@ -37,7 +37,7 @@ import { SessionStore, newSessionId } from './sessions';
 import { listDesktopConversations, openDesktopConversation, readDesktopConversation } from '../bridge/desktop-history';
 import { collectAllDesktopConversations, openDesktopConversationById } from '../bridge/desktop-history-all';
 import { CLI_DOC_URL, CLI_INSTALL_COMMAND, isResumeRejected, runCliTask, statusLine } from '../cli/runner';
-import { detectCli } from '../cli/detect';
+import { checkCliAuth, detectCli } from '../cli/detect';
 
 /** Webview → 扩展 的消息。 */
 interface IncomingMessage {
@@ -222,6 +222,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   private lastVerify: { kind: VerifyKind; command: string; output: string } | undefined;
   /** CLI 模式：当前标签续接的 CLI 会话 ID（由 CLI 输出里捕获，失败则新开会话）。 */
   private cliSessionId: string | undefined;
+  /** 登录等待循环的令牌，新的登录流程会作废旧循环。 */
+  private cliLoginToken = 0;
   /** CLI 模式：最近几轮对话，仅在拿不到会话 ID 时作为降级上下文发给 CLI。 */
   private cliHistory: Array<{ role: 'user' | 'assistant'; text: string }> = [];
   /** CLI 环境提示每个面板只发一次，避免每次打开侧边栏都刷屏。 */
@@ -1705,10 +1707,17 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       }
       if (!result.ok) {
         const detail = statusLine(result.stderr, 500) || result.error || '退出码 ' + result.code;
-        const hint = /未登录|登录|login|auth|401|unauthorized/i.test(result.stderr + ' ' + detail)
-          ? '\n\nCLI 可能还没登录：执行「豆包: 登录 CLI」扫码后再试。'
-          : '';
-        this.post({ type: 'error', message: '豆包 CLI 执行失败：' + detail + hint });
+        const loginRequired = /login_required|未登录|not logged|login required|unauthorized|401/i.test(result.stderr + ' ' + detail);
+        if (loginRequired) {
+          this.post({
+            type: 'error',
+            message: '豆包 CLI 执行失败：' + detail + '\n\n已自动打开登录终端；扫码登录成功后会重试刚才的任务。',
+          });
+          this.post({ type: 'assistant_done', aborted: true, at: Date.now() });
+          void this.handleCliLoginRequired(config, userContent);
+          return;
+        }
+        this.post({ type: 'error', message: '豆包 CLI 执行失败：' + detail });
         this.post({ type: 'assistant_done', aborted: true, at: Date.now() });
         return;
       }
@@ -2741,6 +2750,34 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     void this.watchRunningTask(title);
   }
 
+  /** CLI 未登录：自动打开登录终端，轮询登录状态，成功后自动重试一次。 */
+  private async handleCliLoginRequired(config: DoubaoConfig, retryText: string): Promise<void> {
+    const token = (this.cliLoginToken += 1);
+    this.post({ type: 'notice', text: '检测到 CLI 未登录：已打开登录终端，请在终端里扫码…' });
+    void vscode.commands.executeCommand('doubao.cliLogin');
+    for (let i = 0; i < 45; i += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+      if (token !== this.cliLoginToken || this.disposed) {
+        return;
+      }
+      const info = await detectCli(config.cliPath).catch(() => undefined);
+      if (!info || !info.installed || !info.binary) {
+        continue;
+      }
+      const auth = await checkCliAuth(info).catch(() => ({ loggedIn: false, detail: '' }));
+      if (auth.loggedIn) {
+        this.post({ type: 'notice', text: 'CLI 登录成功，正在自动重试刚才的任务…' });
+        if (!this.running && !this.disposed) {
+          void this.handleUser(retryText, {});
+        }
+        return;
+      }
+      if (i > 0 && i % 5 === 0) {
+        this.post({ type: 'notice', text: '仍在等待扫码登录完成…（' + i * 4 + ' 秒）' });
+      }
+    }
+    this.post({ type: 'notice', text: '还没检测到登录完成：完成扫码后再发一次即可。' });
+  }
   /** 本地图片 → data URL（带缓存；只处理盘符/file: 路径）。 */
   private imageFileData(src: string): string | undefined {
     if (this.imageDataCache.has(src)) {

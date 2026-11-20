@@ -112,5 +112,8 @@ check('发布：CI workflow 存在', fs.existsSync(path.join(root, '..', '..', '
 check('发布：Release workflow 存在', fs.existsSync(path.join(root, '..', '..', '.github', 'workflows', 'release.yml')));
 check('MCP 模板：命令已注册', JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).contributes.commands.some(function (c) { return c.command === 'doubao.addMcpTemplate'; }));
 
+check('CLI 登录引导：自动打开登录并重试', panel.includes('handleCliLoginRequired') && panel.includes('登录成功，正在自动重试'));
+check('CLI 登录引导：识别 login_required', panel.includes('login_required'));
+
 console.log('\n结果：PASS ' + pass + '，FAIL ' + fail);
 process.exit(fail ? 1 : 0);
