@@ -118,5 +118,9 @@ check('CLI 登录引导：识别 login_required', panel.includes('login_required
 check('CLI 登录：二维码渲染到对话', panel.includes('showCliLoginQr') && panel.includes("type: 'image'") && panel.includes('startCliLogin'));
 check('CLI 登录：conflict 自动重试', panel.includes('正在切换账号'));
 
+check('CLI 引导：对话内安装→登录流程', panel.includes('startCliOnboarding') && panel.includes('runCliInstallInChat') && panel.includes('postCliGuide'));
+check('CLI 引导：按钮动作分发', panel.includes('handleCliGuideAction') && panel.includes("case 'cliGuideAction'"));
+check('CLI 引导：webview 渲染卡片', fs.readFileSync(path.join(root, 'media', 'chat.js'), 'utf8').includes('renderCliGuide'));
+
 console.log('\n结果：PASS ' + pass + '，FAIL ' + fail);
 process.exit(fail ? 1 : 0);

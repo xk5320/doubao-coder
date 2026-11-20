@@ -186,6 +186,62 @@ function renderProposal(message) {
   scrollToBottom();
 }
 
+let cliGuideCard = null;
+let cliGuideLogEl = null;
+
+/** CLI 安装/登录引导卡片：步骤 + 按钮 + 安装日志。 */
+function renderCliGuide(message) {
+  if (cliGuideCard && cliGuideCard.parentNode) {
+    cliGuideCard.parentNode.removeChild(cliGuideCard);
+  }
+  cliGuideLogEl = null;
+  const card = el('div', 'cli-guide ' + (message.phase || ''));
+  card.appendChild(el('div', 'cli-guide-title', message.title || 'CLI 引导'));
+  if (message.detail) {
+    card.appendChild(el('div', 'cli-guide-detail', message.detail));
+  }
+  const steps = el('div', 'cli-guide-steps');
+  for (const step of Array.isArray(message.steps) ? message.steps : []) {
+    const row = el('div', 'cli-guide-step ' + (step.state || 'todo'));
+    row.appendChild(el('span', 'cli-guide-dot', step.state === 'done' ? '✓' : step.state === 'active' ? '●' : '○'));
+    row.appendChild(el('span', 'cli-guide-label', step.label || ''));
+    steps.appendChild(row);
+  }
+  card.appendChild(steps);
+  const actions = el('div', 'cli-guide-actions');
+  for (const action of Array.isArray(message.actions) ? message.actions : []) {
+    const btn = el('button', 'btn cli-guide-action' + (action.primary ? ' btn-primary' : ''), action.label || '');
+    btn.type = 'button';
+    btn.setAttribute('data-guide-action', action.id || '');
+    btn.addEventListener('click', function () {
+      vscode.postMessage({ type: 'cliGuideAction', actionId: action.id || '' });
+    });
+    actions.appendChild(btn);
+  }
+  if (actions.children.length) {
+    card.appendChild(actions);
+  }
+  cliGuideCard = card;
+  messagesEl.appendChild(card);
+  cliGuideLogEl = el('pre', 'cli-guide-log hidden');
+  card.appendChild(cliGuideLogEl);
+  scrollToBottom();
+}
+
+/** 安装日志逐行追加（首次出现日志时展开）。 */
+function appendCliGuideLog(line) {
+  if (!cliGuideCard || !cliGuideLogEl) {
+    return;
+  }
+  cliGuideLogEl.classList.remove('hidden');
+  cliGuideLogEl.textContent += (cliGuideLogEl.textContent ? '\n' : '') + String(line || '');
+  const all = cliGuideLogEl.textContent.split('\n');
+  if (all.length > 120) {
+    cliGuideLogEl.textContent = all.slice(-120).join('\n');
+  }
+  cliGuideLogEl.scrollTop = cliGuideLogEl.scrollHeight;
+}
+
 function renderSyncLoading(message) {
   const bar = ensureSyncBar();
   if (!bar) {
@@ -3717,6 +3773,20 @@ let historyLoadingText = '';
         break;
       case 'sources':
         renderSources(message.items);
+        break;
+      case 'cliGuide':
+        renderCliGuide(message);
+        break;
+      case 'cliGuideLog':
+        appendCliGuideLog(message.line);
+        break;
+      case 'cliGuideBusy':
+        if (cliGuideCard) {
+          cliGuideCard.classList.toggle('busy', Boolean(message.busy));
+          Array.from(cliGuideCard.querySelectorAll('.cli-guide-action')).forEach(function (btn) {
+            btn.disabled = Boolean(message.busy);
+          });
+        }
         break;
       case 'contextInfo':
         contextTokens = Number(message.total || 0);

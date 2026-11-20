@@ -37,8 +37,9 @@ import { SessionStore, newSessionId } from './sessions';
 import { listDesktopConversations, openDesktopConversation, readDesktopConversation } from '../bridge/desktop-history';
 import { collectAllDesktopConversations, openDesktopConversationById } from '../bridge/desktop-history-all';
 import { CLI_DOC_URL, CLI_INSTALL_COMMAND, isResumeRejected, runCliTask, statusLine } from '../cli/runner';
-import { checkCliAuth, detectCli } from '../cli/detect';
+import { checkCliAuth, clearCliCache, detectCli } from '../cli/detect';
 import { startCliLogin, readQrFile } from '../cli/login';
+import { clearNpmRuntimeCache, detectNpmRuntime, runNpmInstall } from '../cli/install';
 
 /** Webview → 扩展 的消息。 */
 interface IncomingMessage {
@@ -53,6 +54,8 @@ interface IncomingMessage {
   index?: number;
   /** 审阅卡片勾选的 hunk 序号。 */
   hunks?: number[];
+  /** CLI 引导卡片上的按钮 id。 */
+  actionId?: string;
   /** 回复里点「文件:行」时带的路径与行号。 */
   path?: string;
   line?: number;
@@ -97,6 +100,16 @@ type OutgoingMessage =
   | { type: 'contextInfo'; total: number; items: Array<{ label: string; tokens: number }> }
   | { type: 'tasks'; tasks: Array<{ id: string; title: string; status: 'running' | 'done' | 'failed'; progress?: string; startedAt: number }> }
   | { type: 'sources'; items: Array<{ path: string; line: number }> }
+  | {
+      type: 'cliGuide';
+      phase: 'install' | 'login' | 'ready' | 'error';
+      title: string;
+      detail: string;
+      steps: Array<{ label: string; state: 'done' | 'active' | 'todo' }>;
+      actions: Array<{ id: string; label: string; primary?: boolean }>;
+    }
+  | { type: 'cliGuideLog'; line: string }
+  | { type: 'cliGuideBusy'; busy: boolean }
   | { type: 'verifyStart'; kind: VerifyKind }
   | { type: 'verifyResult'; kind: VerifyKind; ok: boolean; code: number | null; command: string; output: string; error?: string; locations?: Array<{ path: string; line: number }> }
   | { type: 'catalog'; skills: DesktopSkillGroup[]; plugins: DesktopPlugin[] }
@@ -447,6 +460,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         return;
       case 'proposalAction':
         await this.handleProposal(message.id ?? '', message.action ?? '', message.hunks);
+        return;
+      case 'cliGuideAction':
+        await this.handleCliGuideAction(message.actionId ?? '');
+        return;
+      case 'cliGuideAction':
+        await this.handleCliGuideAction(message.actionId ?? '');
         return;
       case 'openFile':
         await this.openFileAt(message.path ?? '', Number(message.line ?? 0));
@@ -1621,16 +1640,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       const info = await detectCli(config.cliPath);
       if (!info.installed || !info.binary) {
         this.post({ type: 'assistant_done', aborted: true, at: Date.now() });
-        const message = info.error || '没有找到豆包 CLI。请先安装：' + CLI_INSTALL_COMMAND;
-        this.post({ type: 'error', message });
-        const action = await vscode.window.showErrorMessage(message, '自动安装', '打开设置中心', '查看安装文档');
-        if (action === '自动安装') {
-          await vscode.commands.executeCommand('doubao.cliAutoInstall');
-        } else if (action === '打开设置中心') {
-          await vscode.commands.executeCommand('doubao.openSettingsPanel');
-        } else if (action === '查看安装文档') {
-          await vscode.env.openExternal(vscode.Uri.parse(CLI_DOC_URL));
-        }
+        await this.startCliOnboarding(userContent);
         return;
       }
 
@@ -2756,6 +2766,167 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     void this.watchRunningTask(title);
   }
 
+  /** 引导流程里要重试的那条用户消息（安装/登录完成后自动续跑）。 */
+  private cliOnboardingText = '';
+
+  /** 在对话里渲染 CLI 引导卡片（安装 → 登录 → 就绪）。 */
+  private postCliGuide(
+    phase: 'install' | 'login' | 'ready' | 'error',
+    detail: string,
+    actions: Array<{ id: string; label: string; primary?: boolean }>,
+  ): void {
+    const installDone = phase === 'login' || phase === 'ready';
+    const loginDone = phase === 'ready';
+    const steps: Array<{ label: string; state: 'done' | 'active' | 'todo' }> = [
+      { label: '安装豆包 CLI', state: installDone ? 'done' : 'active' },
+      { label: '登录豆包账号', state: loginDone ? 'done' : phase === 'login' ? 'active' : 'todo' },
+      { label: '开始对话', state: phase === 'ready' ? 'done' : 'todo' },
+    ];
+    const title =
+      phase === 'install'
+        ? '还需要安装豆包 CLI'
+        : phase === 'login'
+          ? '需要登录豆包账号'
+          : phase === 'ready'
+            ? '豆包 CLI 已就绪'
+            : 'CLI 引导';
+    this.post({ type: 'cliGuide', phase, title, detail, steps, actions });
+  }
+
+  /** 判断并推进 CLI 引导：已就绪直接续跑，未登录拉起二维码，未安装给安装卡片。 */
+  private async startCliOnboarding(retryText: string): Promise<void> {
+    if (retryText) {
+      this.cliOnboardingText = retryText;
+    }
+    const config = readConfig();
+    const info = await detectCli(config.cliPath).catch(() => undefined);
+    if (info && info.installed && info.binary) {
+      const auth = await checkCliAuth(info).catch(() => ({ loggedIn: false, detail: '' }));
+      if (auth.loggedIn) {
+        this.post({ type: 'notice', text: '豆包 CLI 已就绪，正在继续刚才的请求…' });
+        const text = this.cliOnboardingText;
+        this.cliOnboardingText = '';
+        if (text && !this.running && !this.disposed) {
+          void this.handleUser(text, {});
+        }
+        return;
+      }
+      void this.handleCliLoginRequired(config, this.cliOnboardingText);
+      return;
+    }
+    this.postCliGuide('install', info?.error || ('没有找到豆包 CLI：' + CLI_INSTALL_COMMAND), [
+      { id: 'autoInstall', label: '一键自动安装', primary: true },
+      { id: 'terminalInstall', label: '在终端安装' },
+      { id: 'openNodeDownload', label: '下载 Node.js' },
+      { id: 'recheck', label: '重新检测' },
+    ]);
+  }
+
+  /** 引导卡片上的按钮。 */
+  private async handleCliGuideAction(actionId: string): Promise<void> {
+    const config = readConfig();
+    switch (actionId) {
+      case 'autoInstall':
+        await this.runCliInstallInChat();
+        return;
+      case 'terminalInstall': {
+        const terminal = vscode.window.createTerminal({ name: '安装豆包 CLI' });
+        terminal.show();
+        terminal.sendText(CLI_INSTALL_COMMAND, true);
+        this.post({ type: 'notice', text: '已开始安装：安装完成后会自动检测并继续。' });
+        void this.watchCliInstall();
+        return;
+      }
+      case 'openNodeDownload':
+        await vscode.env.openExternal(vscode.Uri.parse('https://nodejs.org/zh-cn/download'));
+        return;
+      case 'openDocs':
+        await vscode.env.openExternal(vscode.Uri.parse(CLI_DOC_URL));
+        return;
+      case 'recheck':
+        clearCliCache();
+        await this.startCliOnboarding(this.cliOnboardingText);
+        return;
+      case 'showQr':
+        void this.handleCliLoginRequired(config, this.cliOnboardingText);
+        return;
+      case 'terminalLogin':
+        void vscode.commands.executeCommand('doubao.cliLogin');
+        return;
+      default:
+        return;
+    }
+  }
+
+  /** 对话里的一键安装：直接跑 npm install -g，输出实时回填到卡片下方。 */
+  private async runCliInstallInChat(): Promise<void> {
+    const runtime = await detectNpmRuntime(true);
+    if (!runtime.ok || !runtime.npmCli || !runtime.nodeExec) {
+      const detail = '自动安装需要 Node.js 18+ 和 npm：' + (runtime.error || '未找到 Node.js / npm');
+      this.postCliGuide('error', detail, [
+        { id: 'openNodeDownload', label: '下载 Node.js', primary: true },
+        { id: 'terminalInstall', label: '在终端安装' },
+        { id: 'recheck', label: '重新检测' },
+      ]);
+      return;
+    }
+    this.post({ type: 'cliGuideBusy', busy: true });
+    this.post({ type: 'cliGuideLog', line: 'npm install -g @bytedance/doubao-cli --registry=https://registry.npmjs.org/' });
+    const result = await runNpmInstall({
+      nodeExec: runtime.nodeExec,
+      npmCli: runtime.npmCli,
+      onLine: (line) => this.post({ type: 'cliGuideLog', line }),
+    }).catch((err: unknown) => ({
+      ok: false,
+      code: null,
+      output: '',
+      error: err instanceof Error ? err.message : String(err),
+      aborted: false,
+      timedOut: false,
+    }));
+    clearNpmRuntimeCache();
+    this.post({ type: 'cliGuideBusy', busy: false });
+    if (!result.ok) {
+      const detail = result.aborted
+        ? '安装已取消。'
+        : result.timedOut
+          ? '安装超时（15 分钟）。'
+          : result.error || statusLine(result.output || '', 300) || 'npm 退出码 ' + result.code;
+      this.postCliGuide('error', '安装失败：' + detail, [
+        { id: 'terminalInstall', label: '在终端安装', primary: true },
+        { id: 'openNodeDownload', label: '下载 Node.js' },
+        { id: 'recheck', label: '重新检测' },
+      ]);
+      return;
+    }
+    this.post({ type: 'notice', text: 'npm 安装完成，正在检测 doubao 命令…' });
+    void this.watchCliInstall();
+  }
+
+  /** 安装后轮询检测，装好就自动进入登录引导。 */
+  private async watchCliInstall(): Promise<void> {
+    const config = readConfig();
+    for (let i = 0; i < 60; i += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      if (this.disposed) {
+        return;
+      }
+      clearCliCache();
+      const info = await detectCli(config.cliPath).catch(() => undefined);
+      if (info && info.installed && info.binary) {
+        this.post({ type: 'notice', text: '检测到豆包 CLI' + (info.version ? '（' + info.version + '）' : '') + '，继续登录…' });
+        await this.startCliOnboarding(this.cliOnboardingText);
+        return;
+      }
+      if (i > 0 && i % 5 === 0) {
+        this.post({ type: 'notice', text: '仍在等待安装完成…（' + i * 3 + ' 秒）' });
+      }
+    }
+    this.postCliGuide('error', '等待安装超时：如果已装好，请点「重新检测」。', [
+      { id: 'recheck', label: '重新检测', primary: true },
+      { id: 'terminalInstall', label: '在终端安装' },
+    ]);
+  }
   /** CLI 未登录：在对话里渲染登录二维码，轮询登录状态，成功后自动重试一次。 */
   private cliLoginProcess: import('node:child_process').ChildProcess | undefined;
 
@@ -2767,6 +2938,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     this.post({ type: 'notice', text: '检测到 CLI 未登录：正在获取登录二维码…' });
+    this.postCliGuide('login', '用豆包 App 扫描下方二维码即可登录，登录后会自动继续刚才的请求。', [
+      { id: 'showQr', label: '重新获取二维码', primary: true },
+      { id: 'terminalLogin', label: '在终端登录' },
+      { id: 'recheck', label: '重新检测' },
+    ]);
     let qrShown = false;
     try {
       const child = startCliLogin({

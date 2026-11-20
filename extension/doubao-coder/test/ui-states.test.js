@@ -620,6 +620,14 @@ check('任务中心：显示运行任务', harness.queryAll('.task-row').length 
 dispatch({ type: 'sources', items: [{ path: 'src/a.ts', line: 12 }, { path: 'src/b.ts', line: 3 }] });
 check('来源面板：列出引用', harness.queryAll('.sources-item').length === 2);
 dispatch({ type: 'clear' });
+dispatch({ type: 'cliGuide', phase: 'install', title: '还需要安装豆包 CLI', detail: '没有找到豆包 CLI', steps: [{ label: '安装豆包 CLI', state: 'active' }, { label: '登录豆包账号', state: 'todo' }], actions: [{ id: 'autoInstall', label: '一键自动安装', primary: true }, { id: 'terminalInstall', label: '在终端安装' }] });
+check('CLI 引导卡片：标题与步骤', Boolean(harness.query('.cli-guide')) && harness.queryAll('.cli-guide-step').length === 2 && harness.body.textContent.indexOf('还需要安装豆包 CLI') >= 0);
+check('CLI 引导卡片：按钮可点', harness.queryAll('.cli-guide-action').length === 2);
+dispatch({ type: 'cliGuideLog', line: 'npm install -g @bytedance/doubao-cli' });
+check('CLI 引导卡片：安装日志展开', harness.query('.cli-guide-log').classList.contains('hidden') === false && harness.query('.cli-guide-log').textContent.indexOf('npm install') >= 0);
+dispatch({ type: 'cliGuideBusy', busy: true });
+check('CLI 引导卡片：安装中禁用按钮', harness.query('.cli-guide').classList.contains('busy') && harness.query('.cli-guide-action').disabled === true);
+dispatch({ type: 'clear' });
 /* 生成能力单选互斥 */
 const quickButtons = harness.queryAll('.chat-action');
 const quickImage = quickButtons.find(function (b) { return b.getAttribute('data-chat-action') === 'image'; });
