@@ -615,6 +615,11 @@ check('初始化指引：提示安装/重启/登录/重试', harness.body.textCo
 dispatch({ type: 'setup', state: { installed: true, running: true, loggedIn: true, ready: true, step: 'ready', detail: 'ok' } });
 dispatch({ type: 'contextInfo', total: 1234, items: [{ label: '当前文件', tokens: 1000 }] });
 check('上下文 token：显示估算', harness.byId('context-hint').textContent.indexOf('tokens') >= 0);
+dispatch({ type: 'tasks', tasks: [{ id: 't1', title: '后台任务', status: 'running', progress: '执行中', startedAt: 1 }] });
+check('任务中心：显示运行任务', harness.queryAll('.task-row').length === 1 && harness.query('.task-row').classList.contains('running'));
+dispatch({ type: 'sources', items: [{ path: 'src/a.ts', line: 12 }, { path: 'src/b.ts', line: 3 }] });
+check('来源面板：列出引用', harness.queryAll('.sources-item').length === 2);
+dispatch({ type: 'clear' });
 /* 生成能力单选互斥 */
 const quickButtons = harness.queryAll('.chat-action');
 const quickImage = quickButtons.find(function (b) { return b.getAttribute('data-chat-action') === 'image'; });

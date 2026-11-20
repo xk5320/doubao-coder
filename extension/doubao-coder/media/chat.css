@@ -2137,3 +2137,15 @@ body.vscode-high-contrast {
 .proposal-hunk.selected .proposal-hunk-check { color: #4caf50; }
 .proposal-hunk-title { font-weight: 600; grid-column: 2; }
 .proposal-hunk-preview { grid-column: 2; color: var(--db-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 后台任务中心 */
+.task-strip { display: flex; flex-direction: column; gap: 2px; padding: 4px 10px; border-bottom: 1px solid var(--db-divider, rgba(128,128,128,0.2)); font-size: 11.5px; }
+.task-strip.hidden { display: none; }
+.task-row { display: flex; align-items: center; gap: 8px; color: var(--db-muted); }
+.task-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--db-muted); }
+.task-row.running .task-dot { background: var(--db-fg); animation: tabDotPulse 1.2s ease-in-out infinite; }
+.task-title { color: var(--db-fg); max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 引用来源 */
+.sources-card { margin: 8px 0; padding: 8px 10px; border: 1px solid var(--db-divider, rgba(128,128,128,0.35)); border-radius: 8px; }
+.sources-title { font-weight: 600; font-size: 12px; margin-bottom: 6px; }
+.sources-item { margin: 2px 6px 2px 0; font-size: 11.5px; padding: 2px 8px; }

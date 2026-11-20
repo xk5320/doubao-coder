@@ -92,6 +92,8 @@ type OutgoingMessage =
   | { type: 'proposal'; id: string; path: string; before: string; after: string; hunks?: DiffHunk[] }
   | { type: 'workspaceFiles'; files: string[] }
   | { type: 'contextInfo'; total: number; items: Array<{ label: string; tokens: number }> }
+  | { type: 'tasks'; tasks: Array<{ id: string; title: string; status: 'running' | 'done' | 'failed'; progress?: string; startedAt: number }> }
+  | { type: 'sources'; items: Array<{ path: string; line: number }> }
   | { type: 'verifyStart'; kind: VerifyKind }
   | { type: 'verifyResult'; kind: VerifyKind; ok: boolean; code: number | null; command: string; output: string; error?: string; locations?: Array<{ path: string; line: number }> }
   | { type: 'catalog'; skills: DesktopSkillGroup[]; plugins: DesktopPlugin[] }
@@ -208,6 +210,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   private tabTitleDirty = false;
   /** 切换标签后从豆包读到的执行状态（用于标签小圆点）。 */
   private tabRunning = false;
+  /** 后台任务（旁观/长任务），供任务中心展示。 */
+  private backgroundTasks: Array<{ id: string; title: string; status: 'running' | 'done' | 'failed'; progress?: string; startedAt: number }> = [];
   /** 待审阅的改动（AI 提议、用户接受后才落盘）。 */
   private pendingProposals = new Map<string, { path: string; before: string; after: string; hunks: DiffHunk[] }>();
   /** 已接受改动的撤销栈（最多 20 条）。 */
@@ -1703,6 +1707,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       this.running = false;
       this.abortController = undefined;
       this.persistTurn();
+      this.postSources(this.assistantBuf);
       void this.refreshTabTitleFromDesktop();
       if (!this.disposed) {
         this.postState();
@@ -2436,12 +2441,59 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
   /** 切到豆包里的某个对话，并把它的历史内容同步到面板（后续提问接着它聊）。 */
   /** 从历史打开一个正在执行的任务时，恢复「进行中」状态并跟着刷新。 */
+  private postTasks(): void {
+    this.post({ type: 'tasks', tasks: this.backgroundTasks.slice(0, 8) });
+  }
+
+  private startBackgroundTask(id: string, title: string): void {
+    this.backgroundTasks = this.backgroundTasks.filter((item) => item.id !== id);
+    this.backgroundTasks.unshift({ id, title, status: 'running', startedAt: Date.now() });
+    this.postTasks();
+  }
+
+  private updateBackgroundTask(id: string, progress: string, status: 'running' | 'failed' = 'running'): void {
+    const task = this.backgroundTasks.find((item) => item.id === id);
+    if (task) {
+      task.progress = progress;
+      task.status = status;
+      this.postTasks();
+    }
+  }
+
+  private finishBackgroundTask(id: string, status: 'done' | 'failed'): void {
+    const task = this.backgroundTasks.find((item) => item.id === id);
+    if (task) {
+      task.status = status;
+      this.postTasks();
+    }
+  }
+
+  /** 收集回复里引用的「文件:行」，供来源面板。 */
+  private postSources(text: string): void {
+    const re = /([A-Za-z]:[\\/][^\s:()]+|(?:[\w.-]+[\\/])*[\w.-]+\.(?:ts|tsx|js|jsx|cs|cpp|hpp|h|py|rs|go|java|kt|md|json))[:(](\d+)/g;
+    const seen = new Set<string>();
+    const items: Array<{ path: string; line: number }> = [];
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(text)) && items.length < 12) {
+      const key = match[1] + ':' + match[2];
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      items.push({ path: match[1], line: Number(match[2]) });
+    }
+    if (items.length > 0) {
+      this.post({ type: 'sources', items });
+    }
+  }
+
   private async watchRunningTask(title: string): Promise<void> {
     this.running = true;
     const controller = new AbortController();
     this.abortController = controller;
     this.postState();
     this.post({ type: 'notice', text: `「${title}」仍在豆包侧执行，正在同步进度…` });
+    this.startBackgroundTask('watch:' + title, title);
     try {
       const result = await watchDesktop({
         port: readConfig().desktopPort,
@@ -2449,12 +2501,17 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         timeoutMs: 30 * 60_000,
         expectTitle: title,
         signal: controller.signal,
-        onBlocks: (blocks) => this.post({ type: 'blocks', blocks }),
+        onBlocks: (blocks) => {
+          this.post({ type: 'blocks', blocks });
+          this.postSources(blocks.map((block) => (block.text || '') + ' ' + (block.detail || '')).join('\n'));
+          this.updateBackgroundTask('watch:' + title, '同步中');
+        },
         onStatus: (text) => {
           this.postIfActive(title, { type: 'notice', text });
         },
         onProgress: (state) => {
           this.postIfActive(title, { type: 'syncStatus', text: state.text, seconds: state.seconds, done: state.done });
+          this.updateBackgroundTask('watch:' + title, state.text);
         },
       });
       log('旁观结束', result.reason);
@@ -2463,6 +2520,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     } finally {
       this.running = false;
       this.abortController = undefined;
+      this.finishBackgroundTask('watch:' + title, 'done');
       const suppress = this.pendingContinue;
       this.pendingContinue = false;
       const aborted = controller.signal.aborted;

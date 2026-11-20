@@ -105,5 +105,8 @@ check('连接问题分类：独立模块', fs.existsSync(path.join(root, 'src', 
 check('连接问题分类：setup 使用分类', fs.readFileSync(path.join(root, 'src', 'doubao', 'setup.ts'), 'utf8').includes('classifyDesktop'));
 check('多根工作区：scope 覆盖所有根目录', panel.includes('folders.join'));
 
+check('任务中心：后台任务状态推送', panel.includes('postTasks') && panel.includes('startBackgroundTask'));
+check('来源面板：收集文件引用', panel.includes('postSources') && fs.readFileSync(path.join(root, 'media', 'chat.js'), 'utf8').includes('renderSources'));
+
 console.log('\n结果：PASS ' + pass + '，FAIL ' + fail);
 process.exit(fail ? 1 : 0);

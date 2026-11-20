@@ -59,6 +59,53 @@ function renderVerify(message) {
   scrollToBottom();
 }
 
+let taskStripEl = null;
+function renderTasks(tasks) {
+  if (!taskStripEl) {
+    taskStripEl = el('div', 'task-strip');
+    taskStripEl.id = 'task-strip';
+    if (messagesEl && messagesEl.parentElement) {
+      messagesEl.parentElement.insertBefore(taskStripEl, messagesEl);
+    }
+  }
+  const list = Array.isArray(tasks) ? tasks : [];
+  taskStripEl.innerHTML = '';
+  taskStripEl.classList.toggle('hidden', list.length === 0);
+  for (const task of list) {
+    const running = task.status === 'running';
+    const row = el('div', 'task-row ' + (running ? 'running' : 'done'));
+    row.appendChild(el('span', 'task-dot'));
+    row.appendChild(el('span', 'task-title', task.title || '任务'));
+    row.appendChild(el('span', 'task-status', running ? (task.progress || '执行中') : (task.status === 'failed' ? '失败' : '已完成')));
+    taskStripEl.appendChild(row);
+  }
+}
+
+let sourcesCardEl = null;
+function renderSources(items) {
+  if (sourcesCardEl) {
+    sourcesCardEl.remove();
+    sourcesCardEl = null;
+  }
+  const list = Array.isArray(items) ? items : [];
+  if (list.length === 0) {
+    return;
+  }
+  sourcesCardEl = el('div', 'sources-card');
+  sourcesCardEl.appendChild(el('div', 'sources-title', '引用来源（' + list.length + '）'));
+  for (const item of list) {
+    const btn = el('button', 'btn sources-item', String(item.path) + ':' + item.line);
+    btn.type = 'button';
+    btn.title = '打开 ' + item.path + ':' + item.line;
+    btn.addEventListener('click', function () {
+      vscode.postMessage({ type: 'openFile', path: item.path, line: item.line });
+    });
+    sourcesCardEl.appendChild(btn);
+  }
+  messagesEl.appendChild(sourcesCardEl);
+  scrollToBottom();
+}
+
 function renderProposal(message) {
   const card = el('div', 'proposal-card');
   const title = el('div', 'proposal-title', '待审阅改动 · ' + String(message.path || '').split(/[\\/]/).pop());
@@ -3566,6 +3613,8 @@ let historyLoadingText = '';
         addError(message.message);
         break;
       case 'clear':
+        if (sourcesCardEl) { sourcesCardEl.remove(); sourcesCardEl = null; }
+        if (taskStripEl) { taskStripEl.innerHTML = ''; taskStripEl.classList.add('hidden'); }
         clearAutoContinue();
         hidePending();
         clearAll();
@@ -3657,6 +3706,12 @@ let historyLoadingText = '';
         break;
       case 'proposal':
         renderProposal(message);
+        break;
+      case 'tasks':
+        renderTasks(message.tasks);
+        break;
+      case 'sources':
+        renderSources(message.items);
         break;
       case 'contextInfo':
         contextTokens = Number(message.total || 0);
