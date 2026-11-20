@@ -379,6 +379,8 @@ function applyQuickAction(action) {
   let historyOpen = false;
   let historyTab = 'local';
   let historyBatch = false;
+  /** 正在内联改名的会话 id：为 null 时显示普通标题。 */
+  let historyRenamingId = null;
   let historyQuery = '';
   let historySelected = new Set();
   let historyData = { local: [], desktop: { ok: false, items: [] } };
@@ -2037,6 +2039,7 @@ let historyLoadingText = '';
     historySelected = new Set();
     historyQuery = '';
     historyTab = 'local';
+    historyRenamingId = null;
     historyLoading = true;
     historyLoadedOnce = false;
     if (historySearchEl) historySearchEl.value = '';
@@ -2044,6 +2047,25 @@ let historyLoadingText = '';
     if (historyBatchBar) historyBatchBar.classList.add('hidden');
     renderHistoryManager();
     vscode.postMessage({ type: 'listHistory' });
+  }
+
+  /** 打开历史面板并在对应行开始内联改名（不再弹系统输入框）。 */
+  function startInlineRename(id) {
+    if (!id) return;
+    if (!historyOpen) {
+      openHistoryManager();
+    }
+    historyRenamingId = id;
+    if (historyTab !== 'local') {
+      historyTab = 'local';
+      if (historyOverlay) {
+        const tabs = historyOverlay.querySelectorAll('.history-tab');
+        for (const tab of tabs) {
+          tab.classList.toggle('on', tab.getAttribute('data-tab') === 'local');
+        }
+      }
+    }
+    renderHistoryManager();
   }
 
   function closeHistoryManager() {
@@ -2147,7 +2169,49 @@ let historyLoadingText = '';
       }
       const main = el('button', 'history-main');
       main.type = 'button';
-      const title = el('span', 'history-row-title', (item.pinned ? '📌 ' : '') + (item.title || '未命名'));
+      const renaming = local && historyRenamingId === item.id;
+      let title;
+      if (renaming) {
+        title = el('span', 'history-row-title history-renaming');
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'history-rename-input';
+        input.value = String(item.title || '').replace(/^📌\s*/, '');
+        input.maxLength = 60;
+        input.placeholder = '输入新标题，回车保存';
+        const finish = function (commit) {
+          const next = String(input.value || '').trim();
+          historyRenamingId = null;
+          if (commit && next) {
+            vscode.postMessage({ type: 'sessionRename', id: item.id, title: next });
+          }
+          renderHistoryManager();
+        };
+        input.addEventListener('keydown', function (event) {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            finish(true);
+          } else if (event.key === 'Escape') {
+            event.preventDefault();
+            finish(false);
+          }
+        });
+        input.addEventListener('blur', function () {
+          if (historyRenamingId === item.id) {
+            finish(true);
+          }
+        });
+        input.addEventListener('click', function (event) {
+          event.stopPropagation();
+        });
+        title.appendChild(input);
+        setTimeout(function () {
+          input.focus();
+          input.select();
+        }, 0);
+      } else {
+        title = el('span', 'history-row-title', (item.pinned ? '📌 ' : '') + (item.title || '未命名'));
+      }
       const metaText = local
         ? (item.time || '') + (item.archived ? ' · 已归档' : '') + (item.desktopMissing ? ' · 对话已不存在' : '')
         : '在豆包中打开' + (item.time ? ' · ' + item.time : '');
@@ -2159,6 +2223,9 @@ let historyLoadingText = '';
       main.appendChild(title);
       main.appendChild(meta);
       main.addEventListener('click', function () {
+        if (historyRenamingId === item.id) {
+          return;
+        }
         if (local) {
           showHistoryLoading('正在加载本地记忆…');
           showPending('正在回放会话');
@@ -2179,8 +2246,9 @@ let historyLoadingText = '';
         const rename = el('button', 'history-action', '✎');
         rename.type = 'button';
         rename.title = '重命名';
-        rename.addEventListener('click', function () {
-          vscode.postMessage({ type: 'sessionAction', id: item.id, action: 'rename' });
+        rename.addEventListener('click', function (event) {
+          event.stopPropagation();
+          startInlineRename(item.id);
         });
         const exportBtn = el('button', 'history-action', '⤓');
         exportBtn.type = 'button';
@@ -2299,7 +2367,7 @@ let historyLoadingText = '';
                 },
                 {
                   label: '重命名',
-                  onSelect: function () { vscode.postMessage({ type: 'sessionAction', id: id, action: 'rename' }); },
+                  onSelect: function () { startInlineRename(id); },
                 },
                 {
                   label: '复制对话 ID',

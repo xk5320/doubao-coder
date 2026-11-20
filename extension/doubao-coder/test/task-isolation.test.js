@@ -137,5 +137,12 @@ check('新对话：回合令牌防止旧任务改状态', panel.includes('privat
 check('新对话：中止时作废令牌', panel.includes('作废当前回合令牌'));
 check('新对话：5 处回合走 beginRun', (panel.match(/const runToken = this\.beginRun\(\)/g) || []).length === 5, String((panel.match(/const runToken = this\.beginRun\(\)/g) || []).length));
 
+const chatJs = fs.readFileSync(path.join(root, 'media', 'chat.js'), 'utf8');
+check('历史重命名：行内输入框', chatJs.includes('history-rename-input') && chatJs.includes("type: 'sessionRename'"));
+check('历史重命名：回车/ESC 处理', chatJs.includes("event.key === 'Enter'") && chatJs.includes("event.key === 'Escape'"));
+check('历史重命名：改走行内输入而非弹窗', chatJs.includes('function startInlineRename(') && chatJs.indexOf("action: 'rename'") < 0);
+check('历史重命名：后端内联改名', panel.includes('renameSessionInline') && panel.includes("case 'sessionRename'"));
+check('历史重命名：不触发豆包重新同步', panel.includes('localOnly') && panel.includes('沿用上次抓到的豆包列表'));
+
 console.log('\n结果：PASS ' + pass + '，FAIL ' + fail);
 process.exit(fail ? 1 : 0);

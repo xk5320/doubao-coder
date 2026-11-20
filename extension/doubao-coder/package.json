@@ -3,7 +3,7 @@
   "displayName": "豆包编程助手",
   "description": "第三方豆包编程助手：侧边栏 AI 对话、Agent 工具调用、行内补全、行内改写（Ctrl+Alt+I），并支持把选区投送到豆包桌面客户端。",
   "icon": "media/doubao-icon.png",
-  "version": "0.55.1",
+  "version": "0.55.2",
   "publisher": "doubao-coder",
   "author": "艾米尔",
   "contributors": [

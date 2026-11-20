@@ -466,6 +466,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       case 'sessionAction':
         await this.handleSessionAction(message.id ?? '', message.action ?? '', message.value ?? '');
         return;
+      case 'sessionRename':
+        await this.renameSessionInline(message.id ?? '', message.title ?? message.value ?? '');
+        return;
       case 'sessionBatch':
         await this.handleSessionBatch(message.action ?? '', Array.isArray(message.ids) ? message.ids : []);
         return;
@@ -2334,7 +2337,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         if (input && this.sessions.rename(id, input)) {
           this.post({ type: 'notice', text: `已重命名为「${input.trim()}」` });
         }
-        break;
+        await this.sendHistory({ localOnly: true });
+        return;
       }
       case 'copyId':
         await vscode.env.clipboard.writeText(id);
@@ -2411,7 +2415,29 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     await this.pushSetup();
   }
 
-  private async sendHistory(): Promise<void> {
+  /** 上一次抓到的豆包对话列表：仅改本地标题时直接复用，避免重命名又触发一次同步。 */
+  private lastDesktopHistory: { ok: boolean; items: Array<{ index: number; id?: string; title: string; time: string; status?: string; running?: boolean }>; error?: string } | undefined;
+
+  /** 直接改名（历史面板内联输入用）：不弹系统输入框，也不重新同步豆包列表。 */
+  private async renameSessionInline(id: string, title: string): Promise<void> {
+    const next = (title || '').trim();
+    if (!next) {
+      this.post({ type: 'notice', text: '标题不能为空' });
+      return;
+    }
+    if (!this.sessions.rename(id, next)) {
+      this.post({ type: 'notice', text: '这个会话已经不存在了' });
+      return;
+    }
+    this.post({ type: 'notice', text: '已重命名为「' + next + '」' });
+    if (this.sessionId === id) {
+      this.ensureTab(id);
+      this.postTabs();
+    }
+    await this.sendHistory({ localOnly: true });
+  }
+
+  private async sendHistory(options: { localOnly?: boolean } = {}): Promise<void> {
     const local = this.sessions.list().map((item) => ({
       id: item.id,
       title: (item.pinned ? '📌 ' : '') + item.title,
@@ -2422,11 +2448,28 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       desktopId: item.desktopId || '',
     }));
     const config = readConfig();
+    const localOnly = Boolean(options.localOnly);
     let desktop: { ok: boolean; items: Array<{ index: number; id?: string; title: string; time: string; status?: string; running?: boolean }>; error?: string } = {
       ok: false,
       items: [],
       error: '仅桌面端免 Key 模式可读取豆包对话列表',
     };
+    if (localOnly) {
+      // 只改本地标题：沿用上次抓到的豆包列表，不进入「正在同步」状态
+      const cached = this.lastDesktopHistory ?? {
+        ok: false,
+        items: [],
+        error: '仅桌面端免 Key 模式可读取豆包对话列表',
+      };
+      const localReconciled = cached.ok
+        ? local.map((item) => ({
+            ...item,
+            desktopMissing: Boolean(item.desktopTitle) && !hasConversation(item.desktopTitle, cached.items),
+          }))
+        : local;
+      this.post({ type: 'historyMenu', local: localReconciled, desktop: cached });
+      return;
+    }
     if (config.authMode === 'desktop') {
       this.post({ type: 'historyMenu', loading: true, loadingText: '正在同步豆包对话…', local, desktop: { ok: true, items: [] } });
       const collected = await collectAllDesktopConversations(config.desktopPort, (count) => {
@@ -2446,6 +2489,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
           desktopMissing: Boolean(item.desktopTitle) && !hasConversation(item.desktopTitle, desktop.items),
         }))
       : local;
+    this.lastDesktopHistory = desktop;
     this.post({ type: 'historyMenu', local: reconciled, desktop });
     if (this.setupState && !this.setupState.ready) {
       this.post({ type: 'setup', state: this.setupState });
